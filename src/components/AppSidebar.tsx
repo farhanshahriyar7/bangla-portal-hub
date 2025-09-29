@@ -125,7 +125,7 @@ export function AppSidebar({
         </SidebarGroup>
 
         {/* Tools */}
-        <SidebarGroup>
+        <SidebarGroup className="px-0">
           <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
             {language === 'bn' ? 'সরঞ্জাম' : 'Tools'}
           </SidebarGroupLabel>
