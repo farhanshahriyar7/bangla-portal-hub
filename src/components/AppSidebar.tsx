@@ -143,7 +143,7 @@ export function AppSidebar({
         </SidebarGroup>
 
         {/* Settings */}
-        <SidebarGroup>
+        <SidebarGroup className="px-0">
           <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
             {language === 'bn' ? 'সেটিংস' : 'Settings'}
           </SidebarGroupLabel>
