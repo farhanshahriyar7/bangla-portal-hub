@@ -92,10 +92,10 @@ export function AppSidebar({
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-sm font-semibold text-card-foreground truncate">
-                {language === 'bn' ? 'সরকারি ড্যাশবোর্ড' : 'Gov Dashboard'}
+                {language === 'bn' ? 'ই-চাকরি বৃত্তান্ত পোর্টাল' : 'E-Service Record Portal'}
               </h2>
               <p className="text-xs text-muted-foreground truncate">
-                {language === 'bn' ? 'তথ্য ও যোগাযোগ প্রযুক্তি' : 'ICT Division'}
+                {language === 'bn' ? 'গেজেটেড সরকারি কর্মচারীগণ' : 'Gazetted Govt. Employees'}
               </p>
             </div>
           </div> : <div className="flex justify-center">
