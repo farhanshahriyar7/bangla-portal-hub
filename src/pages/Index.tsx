@@ -25,6 +25,11 @@ const Index = () => {
   };
 
   const handleNavigation = (section: string) => {
+    if (section === 'office-information') {
+      window.location.href = '/office-information';
+      return;
+    }
+    
     setCurrentSection(section);
     if (section === 'logout') {
       toast({

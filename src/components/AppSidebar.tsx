@@ -29,6 +29,11 @@ export function AppSidebar({
     icon: User,
     section: 'personal'
   }, {
+    title: language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information',
+    url: '/office-information',
+    icon: Building2,
+    section: 'office-information'
+  }, {
     title: language === 'bn' ? 'পেশাগত তথ্য' : 'Professional Data',
     url: '/professional',
     icon: Building2,
