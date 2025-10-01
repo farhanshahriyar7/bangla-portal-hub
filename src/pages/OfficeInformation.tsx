@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, Edit, Trash2, Plus } from "lucide-react";
+import { Eye, Edit, Trash2, Plus, Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -22,6 +22,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useNavigate } from "react-router-dom";
 
 interface OfficeInfoData {
   id: string;
@@ -41,8 +46,10 @@ interface OfficeInformationProps {
   language: 'bn' | 'en';
 }
 
-export default function OfficeInformation({ language }: OfficeInformationProps) {
+export default function OfficeInformation({ language: initialLanguage }: OfficeInformationProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [language, setLanguage] = useState<'bn' | 'en'>(initialLanguage);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OfficeInfoData | null>(null);
@@ -126,238 +133,302 @@ export default function OfficeInformation({ language }: OfficeInformationProps) 
     return <Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>;
   };
 
+  const handleNavigation = (section: string) => {
+    if (section === 'dashboard') {
+      navigate('/');
+      return;
+    }
+    
+    toast({
+      title: language === 'bn' ? 'শীঘ্রই আসছে' : 'Coming Soon',
+      description: language === 'bn' 
+        ? 'এই পেজটি শীঘ্রই উপলব্ধ হবে।'
+        : 'This page will be available soon.',
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              {language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information'}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {language === 'bn' 
-                ? 'আপনার দাপ্তরিক বিবরণী এবং সরকারি তথ্য পরিচালনা করুন' 
-                : 'Manage your official details and government information'}
-            </p>
-          </div>
+    <SidebarProvider>
+      <div className="min-h-screen w-full bg-background flex">
+        <AppSidebar 
+          language={language} 
+          onNavigate={handleNavigation}
+        />
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
-                <Plus className="h-4 w-4 mr-2" />
-                {language === 'bn' ? 'নতুন তথ্য যোগ করুন' : 'Add New Information'}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {language === 'bn' ? 'নতুন দাপ্তরিক তথ্য যোগ করুন' : 'Add New Office Information'}
-                </DialogTitle>
-                <DialogDescription>
-                  {language === 'bn' 
-                    ? 'নিচের ফর্মটি পূরণ করুন। সকল তথ্য সঠিকভাবে প্রদান করুন।' 
-                    : 'Fill in the form below. Provide all information accurately.'}
-                </DialogDescription>
-              </DialogHeader>
+        <SidebarInset className="flex-1">
+          {/* Header */}
+          <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+            <div className="flex h-16 items-center gap-4 px-6">
+              <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
+                <Menu className="h-4 w-4" />
+              </SidebarTrigger>
+              
+              <div className="flex-1" />
+              
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleNavigation('notifications')}
+                  className="relative"
+                >
+                  <Bell className="h-4 w-4" />
+                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full"></span>
+                </Button>
+                <LanguageToggle 
+                  onLanguageChange={setLanguage} 
+                  currentLanguage={language} 
+                />
+                <ThemeToggle />
+              </div>
+            </div>
+          </header>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ministry">
-                      {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
-                    </Label>
-                    <Input
-                      id="ministry"
-                      value={formData.ministry}
-                      onChange={(e) => setFormData({ ...formData, ministry: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="directorate">
-                      {language === 'bn' ? 'অধিদপ্তর নাম' : 'Directorate Name'}
-                    </Label>
-                    <Input
-                      id="directorate"
-                      value={formData.directorate}
-                      onChange={(e) => setFormData({ ...formData, directorate: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="identityNumber">
-                      {language === 'bn' ? 'পরিচিতি নম্বর (যদি থাকে)' : 'Identity Number (if any)'}
-                    </Label>
-                    <Input
-                      id="identityNumber"
-                      value={formData.identityNumber}
-                      onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="nid">
-                      {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
-                    </Label>
-                    <Input
-                      id="nid"
-                      value={formData.nid}
-                      onChange={(e) => setFormData({ ...formData, nid: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tin">
-                      {language === 'bn' ? 'TIN নম্বর (যদি থাকে)' : 'TIN Number (if any)'}
-                    </Label>
-                    <Input
-                      id="tin"
-                      value={formData.tin}
-                      onChange={(e) => setFormData({ ...formData, tin: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="birthPlace">
-                      {language === 'bn' ? 'জন্ম স্থান' : 'Birth Place'}
-                    </Label>
-                    <Input
-                      id="birthPlace"
-                      value={formData.birthPlace}
-                      onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="village">
-                      {language === 'bn' ? 'গ্রাম/ওয়ার্ড' : 'Village/Ward'}
-                    </Label>
-                    <Input
-                      id="village"
-                      value={formData.village}
-                      onChange={(e) => setFormData({ ...formData, village: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="upazila">
-                      {language === 'bn' ? 'উপজেলা/থানা' : 'Upazila/Thana'}
-                    </Label>
-                    <Input
-                      id="upazila"
-                      value={formData.upazila}
-                      onChange={(e) => setFormData({ ...formData, upazila: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="district">
-                      {language === 'bn' ? 'জেলা' : 'District'}
-                    </Label>
-                    <Input
-                      id="district"
-                      value={formData.district}
-                      onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                      required
-                    />
-                  </div>
+          {/* Page Content */}
+          <main className="flex-1 p-6">
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border">
+                <div>
+                  <h1 className="text-3xl font-bold text-foreground">
+                    {language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information'}
+                  </h1>
+                  <p className="text-muted-foreground mt-1">
+                    {language === 'bn' 
+                      ? 'আপনার দাপ্তরিক বিবরণী এবং সরকারি তথ্য পরিচালনা করুন' 
+                      : 'Manage your official details and government information'}
+                  </p>
                 </div>
 
-                <DialogFooter className="gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    {language === 'bn' ? 'বাতিল' : 'Cancel'}
-                  </Button>
-                  <Button type="submit">
-                    {language === 'bn' ? 'সংরক্ষণ করুন' : 'Save'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
+                      <Plus className="h-4 w-4 mr-2" />
+                      {language === 'bn' ? 'নতুন তথ্য যোগ করুন' : 'Add New Information'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {language === 'bn' ? 'নতুন দাপ্তরিক তথ্য যোগ করুন' : 'Add New Office Information'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {language === 'bn' 
+                          ? 'নিচের ফর্মটি পূরণ করুন। সকল তথ্য সঠিকভাবে প্রদান করুন।' 
+                          : 'Fill in the form below. Provide all information accurately.'}
+                      </DialogDescription>
+                    </DialogHeader>
 
-        {/* Table */}
-        <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">
-                    {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
-                  </TableHead>
-                  <TableHead className="font-semibold">
-                    {language === 'bn' ? 'অধিদপ্তর নাম' : 'Directorate Name'}
-                  </TableHead>
-                  <TableHead className="font-semibold">
-                    {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
-                  </TableHead>
-                  <TableHead className="font-semibold">
-                    {language === 'bn' ? 'জেলা' : 'District'}
-                  </TableHead>
-                  <TableHead className="font-semibold">
-                    {language === 'bn' ? 'স্ট্যাটাস' : 'Status'}
-                  </TableHead>
-                  <TableHead className="font-semibold text-right">
-                    {language === 'bn' ? 'কার্যক্রম' : 'Actions'}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      {language === 'bn' ? 'কোন তথ্য পাওয়া যায়নি' : 'No data found'}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  data.map((item) => (
-                    <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-medium">{item.ministry}</TableCell>
-                      <TableCell>{item.directorate}</TableCell>
-                      <TableCell>{item.nid}</TableCell>
-                      <TableCell>{item.district}</TableCell>
-                      <TableCell>{getStatusBadge(item.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleView(item)}
-                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-blue-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(item.id)}
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="ministry">
+                            {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
+                          </Label>
+                          <Input
+                            id="ministry"
+                            value={formData.ministry}
+                            onChange={(e) => setFormData({ ...formData, ministry: e.target.value })}
+                            required
+                          />
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="directorate">
+                            {language === 'bn' ? 'অধিদপ্তর নাম' : 'Directorate Name'}
+                          </Label>
+                          <Input
+                            id="directorate"
+                            value={formData.directorate}
+                            onChange={(e) => setFormData({ ...formData, directorate: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="identityNumber">
+                            {language === 'bn' ? 'পরিচিতি নম্বর (যদি থাকে)' : 'Identity Number (if any)'}
+                          </Label>
+                          <Input
+                            id="identityNumber"
+                            value={formData.identityNumber}
+                            onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="nid">
+                            {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
+                          </Label>
+                          <Input
+                            id="nid"
+                            value={formData.nid}
+                            onChange={(e) => setFormData({ ...formData, nid: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="tin">
+                            {language === 'bn' ? 'TIN নম্বর (যদি থাকে)' : 'TIN Number (if any)'}
+                          </Label>
+                          <Input
+                            id="tin"
+                            value={formData.tin}
+                            onChange={(e) => setFormData({ ...formData, tin: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="birthPlace">
+                            {language === 'bn' ? 'জন্ম স্থান' : 'Birth Place'}
+                          </Label>
+                          <Input
+                            id="birthPlace"
+                            value={formData.birthPlace}
+                            onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="village">
+                            {language === 'bn' ? 'গ্রাম/ওয়ার্ড' : 'Village/Ward'}
+                          </Label>
+                          <Input
+                            id="village"
+                            value={formData.village}
+                            onChange={(e) => setFormData({ ...formData, village: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="upazila">
+                            {language === 'bn' ? 'উপজেলা/থানা' : 'Upazila/Thana'}
+                          </Label>
+                          <Input
+                            id="upazila"
+                            value={formData.upazila}
+                            onChange={(e) => setFormData({ ...formData, upazila: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="district">
+                            {language === 'bn' ? 'জেলা' : 'District'}
+                          </Label>
+                          <Input
+                            id="district"
+                            value={formData.district}
+                            onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <DialogFooter className="gap-2">
+                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                          {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                        </Button>
+                        <Button type="submit">
+                          {language === 'bn' ? 'সংরক্ষণ করুন' : 'Save'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Table */}
+              <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-semibold">
+                          {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          {language === 'bn' ? 'অধিদপ্তর নাম' : 'Directorate Name'}
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          {language === 'bn' ? 'জেলা' : 'District'}
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          {language === 'bn' ? 'স্ট্যাটাস' : 'Status'}
+                        </TableHead>
+                        <TableHead className="font-semibold text-right">
+                          {language === 'bn' ? 'কার্যক্রম' : 'Actions'}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            {language === 'bn' ? 'কোন তথ্য পাওয়া যায়নি' : 'No data found'}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        data.map((item) => (
+                          <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-medium">{item.ministry}</TableCell>
+                            <TableCell>{item.directorate}</TableCell>
+                            <TableCell>{item.nid}</TableCell>
+                            <TableCell>{item.district}</TableCell>
+                            <TableCell>{getStatusBadge(item.status)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleView(item)}
+                                  className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-blue-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(item.id)}
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          </main>
+
+          {/* Footer */}
+          <footer className="border-t border-border bg-card/50 py-4 px-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              {language === 'bn' 
+                ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার | তথ্য ও যোগাযোগ প্রযুক্তি বিভাগ'
+                : 'Government of the People\'s Republic of Bangladesh | ICT Division'
+              }
+            </p>
+          </footer>
+        </SidebarInset>
       </div>
 
       {/* View Dialog */}
@@ -434,6 +505,6 @@ export default function OfficeInformation({ language }: OfficeInformationProps) 
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </SidebarProvider>
   );
 }
