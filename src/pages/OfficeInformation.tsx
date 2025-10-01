@@ -51,6 +51,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
   const navigate = useNavigate();
   const [language, setLanguage] = useState<'bn' | 'en'>(initialLanguage);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<OfficeInfoData | null>(null);
   const [formData, setFormData] = useState<Partial<OfficeInfoData>>({
@@ -120,6 +121,44 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
   const handleView = (item: OfficeInfoData) => {
     setSelectedItem(item);
     setViewDialogOpen(true);
+  };
+
+  const handleEdit = (item: OfficeInfoData) => {
+    setSelectedItem(item);
+    setFormData({
+      ministry: item.ministry,
+      directorate: item.directorate,
+      identityNumber: item.identityNumber,
+      nid: item.nid,
+      tin: item.tin,
+      birthPlace: item.birthPlace,
+      village: item.village,
+      upazila: item.upazila,
+      district: item.district,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedItem) return;
+
+    const updatedData = data.map(item => 
+      item.id === selectedItem.id 
+        ? { ...item, ...formData }
+        : item
+    );
+
+    setData(updatedData);
+    setEditDialogOpen(false);
+    setFormData({});
+    setSelectedItem(null);
+    
+    toast({
+      title: language === 'bn' ? "সফলভাবে আপডেট করা হয়েছে" : "Successfully Updated",
+      description: language === 'bn' ? "তথ্য আপডেট হয়েছে" : "Information has been updated",
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -395,6 +434,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  onClick={() => handleEdit(item)}
                                   className="h-8 w-8 text-blue-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
                                 >
                                   <Edit className="h-4 w-4" />
@@ -430,6 +470,141 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
           </footer>
         </SidebarInset>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'bn' ? 'দাপ্তরিক তথ্য সম্পাদনা' : 'Edit Office Information'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'bn' 
+                ? 'তথ্য আপডেট করুন। সকল তথ্য সঠিকভাবে প্রদান করুন।' 
+                : 'Update the information. Provide all information accurately.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleUpdate} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-ministry">
+                  {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
+                </Label>
+                <Input
+                  id="edit-ministry"
+                  value={formData.ministry}
+                  onChange={(e) => setFormData({ ...formData, ministry: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-directorate">
+                  {language === 'bn' ? 'অধিদপ্তর নাম' : 'Directorate Name'}
+                </Label>
+                <Input
+                  id="edit-directorate"
+                  value={formData.directorate}
+                  onChange={(e) => setFormData({ ...formData, directorate: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-identityNumber">
+                  {language === 'bn' ? 'পরিচিতি নম্বর (যদি থাকে)' : 'Identity Number (if any)'}
+                </Label>
+                <Input
+                  id="edit-identityNumber"
+                  value={formData.identityNumber}
+                  onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-nid">
+                  {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
+                </Label>
+                <Input
+                  id="edit-nid"
+                  value={formData.nid}
+                  onChange={(e) => setFormData({ ...formData, nid: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-tin">
+                  {language === 'bn' ? 'TIN নম্বর (যদি থাকে)' : 'TIN Number (if any)'}
+                </Label>
+                <Input
+                  id="edit-tin"
+                  value={formData.tin}
+                  onChange={(e) => setFormData({ ...formData, tin: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-birthPlace">
+                  {language === 'bn' ? 'জন্ম স্থান' : 'Birth Place'}
+                </Label>
+                <Input
+                  id="edit-birthPlace"
+                  value={formData.birthPlace}
+                  onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-village">
+                  {language === 'bn' ? 'গ্রাম/ওয়ার্ড' : 'Village/Ward'}
+                </Label>
+                <Input
+                  id="edit-village"
+                  value={formData.village}
+                  onChange={(e) => setFormData({ ...formData, village: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-upazila">
+                  {language === 'bn' ? 'উপজেলা/থানা' : 'Upazila/Thana'}
+                </Label>
+                <Input
+                  id="edit-upazila"
+                  value={formData.upazila}
+                  onChange={(e) => setFormData({ ...formData, upazila: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-district">
+                  {language === 'bn' ? 'জেলা' : 'District'}
+                </Label>
+                <Input
+                  id="edit-district"
+                  value={formData.district}
+                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                {language === 'bn' ? 'বাতিল' : 'Cancel'}
+              </Button>
+              <Button type="submit">
+                {language === 'bn' ? 'আপডেট করুন' : 'Update'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
