@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Home, User, FileText, Calendar, Upload, Download, Shield, Settings, Bell, LogOut, Building2 } from "lucide-react";
+import { Home, User, FileText, Calendar, Upload, Download, Shield, Settings, Bell, LogOut, Building2, ChevronDown } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 interface AppSidebarProps {
   language: 'bn' | 'en';
   onNavigate: (section: string) => void;
@@ -18,6 +19,7 @@ export function AppSidebar({
   const collapsed = state === "collapsed";
   const location = useLocation();
   const currentPath = location.pathname;
+  const [toolsOpen, setToolsOpen] = useState(true);
   const mainMenuItems = [{
     title: language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard',
     url: '/',
@@ -131,20 +133,31 @@ export function AppSidebar({
 
         {/* Tools */}
         <SidebarGroup className="px-0">
-          <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
-            {language === 'bn' ? 'সরঞ্জাম' : 'Tools'}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {toolsMenuItems.map(item => <SidebarMenuItem key={item.section}>
-                  <SidebarMenuButton onClick={() => onNavigate(item.section)} className={getMenuButtonClass(item.section)} size={collapsed ? "sm" : "default"}>
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span className="ml-2 truncate">{item.title}</span>}
-                    {item.section === 'notifications' && <div className="ml-auto h-2 w-2 bg-destructive rounded-full"></div>}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>)}
-            </SidebarMenu>
-          </SidebarGroupContent>
+          <Collapsible open={toolsOpen} onOpenChange={setToolsOpen}>
+            <SidebarGroupLabel className={collapsed ? "sr-only" : "flex items-center justify-between"}>
+              <span>{language === 'bn' ? 'সরঞ্জাম' : 'Tools'}</span>
+              {!collapsed && (
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <ChevronDown className={`h-4 w-4 transition-transform ${toolsOpen ? '' : '-rotate-90'}`} />
+                  </Button>
+                </CollapsibleTrigger>
+              )}
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {toolsMenuItems.map(item => <SidebarMenuItem key={item.section}>
+                      <SidebarMenuButton onClick={() => onNavigate(item.section)} className={getMenuButtonClass(item.section)} size={collapsed ? "sm" : "default"}>
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span className="ml-2 truncate">{item.title}</span>}
+                        {item.section === 'notifications' && <div className="ml-auto h-2 w-2 bg-destructive rounded-full"></div>}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>)}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
         </SidebarGroup>
 
         {/* Settings */}
