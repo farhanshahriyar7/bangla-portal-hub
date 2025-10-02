@@ -101,7 +101,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Gazetted Officers' E-Job Portal</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access the portal
           </CardDescription>
@@ -109,11 +109,11 @@ export default function Login() {
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Official Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="your.email@example.com"
+                placeholder="your.email@nsi.gov.bd"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

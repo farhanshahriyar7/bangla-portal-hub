@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -74,8 +74,10 @@ export default function Register() {
 
   const [idProofFile, setIdProofFile] = useState<File | null>(null);
   const [passportPhotoFile, setPassportPhotoFile] = useState<File | null>(null);
+  const [idPreview, setIdPreview] = useState<string | null>(null);
+  const [passportPreview, setPassportPreview] = useState<string | null>(null);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | Date | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field
     setErrors((prev) => {
@@ -148,6 +150,35 @@ export default function Register() {
 
     return publicUrl;
   };
+
+  // Create object URLs for previews and revoke when file changes or component unmounts
+  useEffect(() => {
+    let url: string | null = null;
+    if (idProofFile) {
+      url = URL.createObjectURL(idProofFile);
+      setIdPreview(url);
+    } else {
+      setIdPreview(null);
+    }
+
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [idProofFile]);
+
+  useEffect(() => {
+    let url: string | null = null;
+    if (passportPhotoFile) {
+      url = URL.createObjectURL(passportPhotoFile);
+      setPassportPreview(url);
+    } else {
+      setPassportPreview(null);
+    }
+
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [passportPhotoFile]);
 
   const handleSubmit = async () => {
     if (!validateStep(4)) {
@@ -233,7 +264,7 @@ export default function Register() {
       });
 
       navigate('/pending-approval');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       toast({
         title: 'Error',
@@ -252,7 +283,7 @@ export default function Register() {
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">
-            Government Portal Registration
+            Gazetted Officers' E-Job Portal
           </CardTitle>
           <CardDescription className="text-center">
             Step {step} of 4: {
@@ -276,7 +307,7 @@ export default function Register() {
                     id="fullName"
                     value={formData.fullName}
                     onChange={(e) => handleInputChange('fullName', e.target.value)}
-                    placeholder="Enter your full name"
+                    placeholder="Enter full name as per official records"
                   />
                   {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
                 </div>
@@ -288,7 +319,7 @@ export default function Register() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder="your.email@example.com"
+                    placeholder="yourofficialemail@nsi.gov.bd"
                   />
                   {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
@@ -299,7 +330,7 @@ export default function Register() {
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder="01XXXXXXXXX"
+                    placeholder="+8801XXXXXXXXX"
                   />
                   {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
                 </div>
@@ -342,7 +373,6 @@ export default function Register() {
                     <SelectContent>
                       <SelectItem value="male">Male</SelectItem>
                       <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.gender && <p className="text-sm text-destructive">{errors.gender}</p>}
@@ -395,7 +425,7 @@ export default function Register() {
                   id="designation"
                   value={formData.designation}
                   onChange={(e) => handleInputChange('designation', e.target.value)}
-                  placeholder="Your job title"
+                  placeholder="Your job title or designation"
                 />
                 {errors.designation && <p className="text-sm text-destructive">{errors.designation}</p>}
               </div>
@@ -406,7 +436,7 @@ export default function Register() {
                   id="department"
                   value={formData.department}
                   onChange={(e) => handleInputChange('department', e.target.value)}
-                  placeholder="Your department"
+                  placeholder="Your department name"
                 />
                 {errors.department && <p className="text-sm text-destructive">{errors.department}</p>}
               </div>
@@ -489,7 +519,7 @@ export default function Register() {
           {step === 4 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="idProof">ID Proof (NID/Passport) *</Label>
+                <Label htmlFor="idProof">ID Proof (Official ID) *</Label>
                 <div className="border-2 border-dashed rounded-lg p-6 text-center">
                   <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <Input
@@ -509,10 +539,40 @@ export default function Register() {
                     }}
                     className="max-w-xs mx-auto"
                   />
+
                   {idProofFile && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Selected: {idProofFile.name}
-                    </p>
+                    <div className="mt-4 text-left">
+                      <p className="text-sm text-muted-foreground">Selected: {idProofFile.name}</p>
+
+                      {/* Preview area */}
+                      <div className="mt-3">
+                        {idPreview && idProofFile.type === 'application/pdf' ? (
+                          <div className="border rounded overflow-hidden">
+                            <iframe src={idPreview} title="ID Proof PDF" className="w-full h-64" />
+                          </div>
+                        ) : idPreview ? (
+                          <img src={idPreview} alt="ID preview" className="max-h-48 mx-auto" />
+                        ) : null}
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-3">
+                        {idPreview && (
+                          <Button
+                            variant="ghost"
+                            onClick={() => idPreview && window.open(idPreview, '_blank')}
+                          >
+                            Open
+                          </Button>
+                        )}
+
+                        <Button
+                          variant="destructive"
+                          onClick={() => setIdProofFile(null)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -538,10 +598,36 @@ export default function Register() {
                     }}
                     className="max-w-xs mx-auto"
                   />
+
                   {passportPhotoFile && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Selected: {passportPhotoFile.name}
-                    </p>
+                    <div className="mt-4 text-left">
+                      <p className="text-sm text-muted-foreground">Selected: {passportPhotoFile.name}</p>
+
+                      {/* Image preview */}
+                      <div className="mt-3">
+                        {passportPreview && (
+                          <img src={passportPreview} alt="Passport preview" className="mx-auto max-h-48 rounded" />
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-3">
+                        {passportPreview && (
+                          <Button
+                            variant="ghost"
+                            onClick={() => passportPreview && window.open(passportPreview, '_blank')}
+                          >
+                            Open
+                          </Button>
+                        )}
+
+                        <Button
+                          variant="destructive"
+                          onClick={() => setPassportPhotoFile(null)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

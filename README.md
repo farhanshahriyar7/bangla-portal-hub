@@ -47,6 +47,7 @@ A modern, user-friendly dashboard designed specifically for registered governmen
 
 ## 📁 Project Structure
 
+
 ```
 bangla-portal-hub
 ├─ bun.lockb
@@ -70,6 +71,7 @@ bangla-portal-hub
 │  │  ├─ AppSidebar.tsx
 │  │  ├─ DashboardCard.tsx
 │  │  ├─ LanguageToggle.tsx
+│  │  ├─ ProtectedRoute.tsx
 │  │  ├─ QuickStats.tsx
 │  │  ├─ ThemeToggle.tsx
 │  │  ├─ ui
@@ -123,17 +125,32 @@ bangla-portal-hub
 │  │  │  ├─ tooltip.tsx
 │  │  │  └─ use-toast.ts
 │  │  └─ WelcomeHeader.tsx
+│  ├─ contexts
+│  │  └─ AuthContext.tsx
 │  ├─ hooks
 │  │  ├─ use-mobile.tsx
 │  │  └─ use-toast.ts
 │  ├─ index.css
+│  ├─ integrations
+│  │  └─ supabase
+│  │     ├─ client.ts
+│  │     └─ types.ts
 │  ├─ lib
 │  │  └─ utils.ts
 │  ├─ main.tsx
 │  ├─ pages
 │  │  ├─ Index.tsx
-│  │  └─ NotFound.tsx
+│  │  ├─ Login.tsx
+│  │  ├─ NotFound.tsx
+│  │  ├─ OfficeInformation.tsx
+│  │  ├─ PendingApproval.tsx
+│  │  └─ Register.tsx
 │  └─ vite-env.d.ts
+├─ supabase
+│  ├─ config.toml
+│  └─ migrations
+│     ├─ 20251002065532_836d830b-a63d-404f-89ea-b6402a2c1a77.sql
+│     └─ 20251002065653_48c8095b-7f78-4e69-bdf4-c1e6a82b5159.sql
 ├─ tailwind.config.ts
 ├─ tsconfig.app.json
 ├─ tsconfig.json

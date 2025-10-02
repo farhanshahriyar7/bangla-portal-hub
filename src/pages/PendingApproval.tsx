@@ -86,8 +86,9 @@ export default function PendingApproval() {
             <h4 className="font-semibold text-sm">What happens next?</h4>
             <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
               <li>An administrator will review your submitted documents</li>
-              <li>You will receive an email notification once verified</li>
+              <li>You will receive an email notification once your account is approved within 1-2 govt working days</li>
               <li>After approval, you can log in and access the portal</li>
+              <li>If you have any questions, please contact support</li>
             </ul>
           </div>
 
@@ -95,7 +96,7 @@ export default function PendingApproval() {
             <p className="text-sm text-muted-foreground text-center mb-4">
               Need help? Contact support at{' '}
               <a href="mailto:support@gov.bd" className="text-primary hover:underline">
-                support@gov.bd
+                support@nsi.gov.bd
               </a>
             </p>
             <Button variant="outline" className="w-full" onClick={handleLogout}>
