@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          department: string | null
+          designation: string | null
+          district: string | null
+          email: string
+          full_name: string
+          gender: string | null
+          id: string
+          id_proof_url: string | null
+          is_verified: boolean | null
+          nid_number: string | null
+          office_name: string | null
+          passport_photo_url: string | null
+          phone: string | null
+          postal_code: string | null
+          updated_at: string | null
+          verification_requested_at: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          department?: string | null
+          designation?: string | null
+          district?: string | null
+          email: string
+          full_name: string
+          gender?: string | null
+          id: string
+          id_proof_url?: string | null
+          is_verified?: boolean | null
+          nid_number?: string | null
+          office_name?: string | null
+          passport_photo_url?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string | null
+          verification_requested_at?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          department?: string | null
+          designation?: string | null
+          district?: string | null
+          email?: string
+          full_name?: string
+          gender?: string | null
+          id?: string
+          id_proof_url?: string | null
+          is_verified?: boolean | null
+          nid_number?: string | null
+          office_name?: string | null
+          passport_photo_url?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string | null
+          verification_requested_at?: string | null
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
