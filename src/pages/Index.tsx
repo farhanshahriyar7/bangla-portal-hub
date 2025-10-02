@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, FileText, Settings, Shield, Calendar, Upload, Download, Bell, Menu } from "lucide-react";
 import { WelcomeHeader } from "@/components/WelcomeHeader";
 import { DashboardCard } from "@/components/DashboardCard";
@@ -8,12 +9,15 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 
 const Index = () => {
   const [language, setLanguage] = useState<'bn' | 'en'>('bn');
   const [currentSection, setCurrentSection] = useState('dashboard');
   const { toast } = useToast();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleCardAction = (action: string) => {
     toast({
@@ -24,23 +28,25 @@ const Index = () => {
     });
   };
 
-  const handleNavigation = (section: string) => {
+  const handleNavigation = async (section: string) => {
     if (section === 'office-information') {
-      window.location.href = '/office-information';
+      navigate('/office-information');
       return;
     }
     
-    setCurrentSection(section);
     if (section === 'logout') {
+      await signOut();
       toast({
         title: language === 'bn' ? 'লগ আউট' : 'Logout',
         description: language === 'bn' 
           ? 'আপনি সফলভাবে লগ আউট হয়েছেন।'
           : 'You have been successfully logged out.',
       });
+      navigate('/login');
       return;
     }
     
+    setCurrentSection(section);
     toast({
       title: language === 'bn' ? 'পেজ পরিবর্তন' : 'Page Changed',
       description: language === 'bn' 
