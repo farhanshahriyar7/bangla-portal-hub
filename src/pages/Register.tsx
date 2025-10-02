@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import * as React from 'react';
+const { useState } = React;
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { z } from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import Calendar22 from '@/components/ui/calendar22';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
@@ -24,7 +26,7 @@ const step1Schema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   phone: z.string().min(11, 'Phone number must be at least 11 digits'),
   dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
-  gender: z.enum(['male', 'female', 'other'], { required_error: 'Gender is required' }),
+  gender: z.enum(['male', 'female'], { required_error: 'Gender is required' }),
   nidNumber: z.string().min(10, 'NID number must be at least 10 characters'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -151,8 +153,8 @@ export default function Register() {
     return publicUrl;
   };
 
-  // Create object URLs for previews and revoke when file changes or component unmounts
-  useEffect(() => {
+  // Create object URLs for file previews and revoke when files change or component unmounts
+  React.useEffect(() => {
     let url: string | null = null;
     if (idProofFile) {
       url = URL.createObjectURL(idProofFile);
@@ -166,7 +168,7 @@ export default function Register() {
     };
   }, [idProofFile]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     let url: string | null = null;
     if (passportPhotoFile) {
       url = URL.createObjectURL(passportPhotoFile);
@@ -179,6 +181,8 @@ export default function Register() {
       if (url) URL.revokeObjectURL(url);
     };
   }, [passportPhotoFile]);
+
+  // ...existing code...
 
   const handleSubmit = async () => {
     if (!validateStep(4)) {
@@ -336,31 +340,12 @@ export default function Register() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Date of Birth *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formData.dateOfBirth && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.dateOfBirth ? format(formData.dateOfBirth, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={formData.dateOfBirth}
-                        onSelect={(date) => handleInputChange('dateOfBirth', date)}
-                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <div>
+                    <Calendar22
+                      value={formData.dateOfBirth}
+                      onChange={(date) => handleInputChange('dateOfBirth', date)}
+                    />
+                  </div>
                   {errors.dateOfBirth && <p className="text-sm text-destructive">{errors.dateOfBirth}</p>}
                 </div>
 
@@ -544,7 +529,6 @@ export default function Register() {
                     <div className="mt-4 text-left">
                       <p className="text-sm text-muted-foreground">Selected: {idProofFile.name}</p>
 
-                      {/* Preview area */}
                       <div className="mt-3">
                         {idPreview && idProofFile.type === 'application/pdf' ? (
                           <div className="border rounded overflow-hidden">
@@ -557,18 +541,12 @@ export default function Register() {
 
                       <div className="flex items-center gap-2 mt-3">
                         {idPreview && (
-                          <Button
-                            variant="ghost"
-                            onClick={() => idPreview && window.open(idPreview, '_blank')}
-                          >
+                          <Button variant="ghost" onClick={() => idPreview && window.open(idPreview, '_blank')}>
                             Open
                           </Button>
                         )}
 
-                        <Button
-                          variant="destructive"
-                          onClick={() => setIdProofFile(null)}
-                        >
+                        <Button variant="destructive" onClick={() => setIdProofFile(null)}>
                           Remove
                         </Button>
                       </div>
@@ -603,7 +581,6 @@ export default function Register() {
                     <div className="mt-4 text-left">
                       <p className="text-sm text-muted-foreground">Selected: {passportPhotoFile.name}</p>
 
-                      {/* Image preview */}
                       <div className="mt-3">
                         {passportPreview && (
                           <img src={passportPreview} alt="Passport preview" className="mx-auto max-h-48 rounded" />
@@ -612,18 +589,12 @@ export default function Register() {
 
                       <div className="flex items-center gap-2 mt-3">
                         {passportPreview && (
-                          <Button
-                            variant="ghost"
-                            onClick={() => passportPreview && window.open(passportPreview, '_blank')}
-                          >
+                          <Button variant="ghost" onClick={() => passportPreview && window.open(passportPreview, '_blank')}>
                             Open
                           </Button>
                         )}
 
-                        <Button
-                          variant="destructive"
-                          onClick={() => setPassportPhotoFile(null)}
-                        >
+                        <Button variant="destructive" onClick={() => setPassportPhotoFile(null)}>
                           Remove
                         </Button>
                       </div>
