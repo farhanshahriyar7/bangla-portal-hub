@@ -25,6 +25,7 @@ export type Database = {
           designation: string | null
           district: string | null
           email: string
+          employee_id: string | null
           full_name: string
           gender: string | null
           id: string
@@ -49,6 +50,7 @@ export type Database = {
           designation?: string | null
           district?: string | null
           email: string
+          employee_id?: string | null
           full_name: string
           gender?: string | null
           id: string
@@ -73,6 +75,7 @@ export type Database = {
           designation?: string | null
           district?: string | null
           email?: string
+          employee_id?: string | null
           full_name?: string
           gender?: string | null
           id?: string
