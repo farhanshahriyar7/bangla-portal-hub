@@ -37,6 +37,7 @@ const step2Schema = z.object({
   designation: z.string().min(2, 'Designation is required'),
   department: z.string().min(2, 'Department is required'),
   officeName: z.string().min(2, 'Office name is required'),
+  employeeId: z.string().min(2, 'Employee ID is required'),
 });
 
 const step3Schema = z.object({
@@ -64,6 +65,7 @@ export default function Register() {
     dateOfBirth: undefined as Date | undefined,
     gender: '',
     nidNumber: '',
+    employeeId: '',
     designation: '',
     department: '',
     officeName: '',
@@ -239,6 +241,7 @@ export default function Register() {
           date_of_birth: formData.dateOfBirth?.toISOString().split('T')[0],
           gender: formData.gender,
           nid_number: formData.nidNumber,
+          employee_id: formData.employeeId || null,
           designation: formData.designation,
           department: formData.department,
           office_name: formData.officeName,
@@ -374,6 +377,7 @@ export default function Register() {
                   {errors.nidNumber && <p className="text-sm text-destructive">{errors.nidNumber}</p>}
                 </div>
 
+                {/* password */}
                 <div className="space-y-2">
                   <Label htmlFor="password">Password *</Label>
                   <Input
@@ -386,6 +390,7 @@ export default function Register() {
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
 
+                {/* confirm password */}
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm Password *</Label>
                   <Input
@@ -397,6 +402,7 @@ export default function Register() {
                   />
                   {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
                 </div>
+
               </div>
             </div>
           )}
@@ -424,6 +430,17 @@ export default function Register() {
                   placeholder="Your department name"
                 />
                 {errors.department && <p className="text-sm text-destructive">{errors.department}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="employeeId">Employee ID</Label>
+                <Input
+                  id="employeeId"
+                  value={formData.employeeId}
+                  onChange={(e) => handleInputChange('employeeId', e.target.value)}
+                  placeholder="Enter employee/staff ID"
+                />
+                {errors.employeeId && <p className="text-sm text-destructive">{errors.employeeId}</p>}
               </div>
 
               <div className="space-y-2">
