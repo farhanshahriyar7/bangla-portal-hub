@@ -23,6 +23,7 @@ export const WelcomeHeader = ({ language }: WelcomeHeaderProps) => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -38,6 +39,17 @@ export const WelcomeHeader = ({ language }: WelcomeHeaderProps) => {
         console.error('Error fetching profile:', error);
       } else if (data) {
         setProfile(data);
+        
+        // If passport photo exists, get signed URL
+        if (data.passport_photo_url) {
+          const { data: signedUrlData } = await supabase.storage
+            .from('passport-photos')
+            .createSignedUrl(data.passport_photo_url, 3600);
+          
+          if (signedUrlData?.signedUrl) {
+            setAvatarUrl(signedUrlData.signedUrl);
+          }
+        }
       }
       setLoading(false);
     };
@@ -80,7 +92,7 @@ export const WelcomeHeader = ({ language }: WelcomeHeaderProps) => {
       <CardContent className="p-6">
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16 border-2 border-primary-foreground/20">
-            <AvatarImage src={profile.passport_photo_url || undefined} />
+            <AvatarImage src={avatarUrl || undefined} />
             <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground text-lg font-semibold">
               {profile.full_name.split(' ').map(n => n[0]).join('').substring(0, 2)}
             </AvatarFallback>
