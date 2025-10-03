@@ -40,14 +40,73 @@ export const WelcomeHeader = ({ language }: WelcomeHeaderProps) => {
       } else if (data) {
         setProfile(data);
         
-        // If passport photo exists, get signed URL
+        // If passport photo exists, attempt to resolve a usable URL.
         if (data.passport_photo_url) {
-          const { data: signedUrlData } = await supabase.storage
-            .from('passport-photos')
-            .createSignedUrl(data.passport_photo_url, 3600);
-          
-          if (signedUrlData?.signedUrl) {
-            setAvatarUrl(signedUrlData.signedUrl);
+          const rawPath = data.passport_photo_url;
+
+          try {
+            // If the stored value is already a full URL, try to use it as-is,
+            // but also detect Supabase public storage URLs so we can request
+            // a signed URL for private buckets.
+            if (/^https?:\/\//i.test(rawPath)) {
+              const storageMarker = '/storage/v1/object/public/';
+              const markerIndex = rawPath.indexOf(storageMarker);
+
+              if (markerIndex !== -1) {
+                // URL looks like: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+                const after = rawPath.slice(markerIndex + storageMarker.length);
+                const [bucket, ...rest] = after.split('/');
+                const path = rest.join('/');
+
+                try {
+                  const { data: signedUrlData, error: signedError } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(path, 3600);
+
+                  if (!signedError && signedUrlData?.signedUrl) {
+                    setAvatarUrl(signedUrlData.signedUrl);
+                    // move on
+                  } else {
+                    // fallback to raw URL
+                    setAvatarUrl(rawPath);
+                  }
+                } catch (err) {
+                  console.error('Error requesting signed URL from public storage URL:', err);
+                  setAvatarUrl(rawPath);
+                }
+              } else {
+                setAvatarUrl(rawPath);
+              }
+            } else {
+              // Trim leading slashes which break storage APIs
+              const path = rawPath.replace(/^\/+/u, '');
+
+              // Try creating a signed URL first (for private buckets)
+              const { data: signedUrlData, error: signedError } = await supabase.storage
+                .from('passport-photos')
+                .createSignedUrl(path, 3600);
+
+              if (signedError) {
+                console.error('Error creating signed URL for avatar:', signedError);
+              }
+
+              if (signedUrlData?.signedUrl) {
+                setAvatarUrl(signedUrlData.signedUrl);
+              } else {
+                // Fall back to public URL (if the bucket/object is public)
+                const { data: publicData } = supabase.storage
+                  .from('passport-photos')
+                  .getPublicUrl(path);
+
+                if (publicData?.publicUrl) {
+                  setAvatarUrl(publicData.publicUrl);
+                } else {
+                  console.warn('Could not resolve avatar URL for path:', path);
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Unexpected error resolving avatar URL:', err);
           }
         }
       }
@@ -90,8 +149,8 @@ export const WelcomeHeader = ({ language }: WelcomeHeaderProps) => {
   return (
     <Card className="shadow-card bg-gradient-primary text-primary-foreground">
       <CardContent className="p-6">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 border-2 border-primary-foreground/20">
+        <div className="flex flex-col md:flex-row items-center md:items-center gap-4">
+          <Avatar className="h-16 w-16 md:h-20 md:w-20 border-2 border-primary-foreground/20">
             <AvatarImage src={avatarUrl || undefined} />
             <AvatarFallback className="bg-primary-foreground/10 text-primary-foreground text-lg font-semibold">
               {profile.full_name.split(' ').map(n => n[0]).join('').substring(0, 2)}
@@ -99,24 +158,25 @@ export const WelcomeHeader = ({ language }: WelcomeHeaderProps) => {
           </Avatar>
           
           <div className="flex-1">
-            <h1 className="text-2xl font-bold mb-1">{welcomeText}</h1>
-            <p className="text-primary-foreground/80 mb-3">{dashboardText}</p>
+            <h1 className="text-2xl font-bold mb-1 text-center md:text-left">{welcomeText}</h1>
+            <p className="text-primary-foreground/80 mb-3 text-center md:text-left">{dashboardText}</p>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 justify-center md:justify-start">
               {profile.employee_id && (
                 <Badge variant="secondary" className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20">
-                  {profile.employee_id}
+                  {profile.employee_id || (language === 'bn' ? 'কর্মচারী আইডি নেই' : 'No Employee ID')}
                 </Badge>
               )}
+
               {profile.designation && (
-                <Badge variant="secondary" className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20">
+                <Badge variant="secondary" className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:text-primary-foreground/80 hover:bg-green-800">
                   {profile.designation}
                 </Badge>
               )}
             </div>
           </div>
           
-          <div className="text-right text-sm text-primary-foreground/70">
+          <div className="text-sm text-primary-foreground/70 text-center md:text-right mt-3 md:mt-0">
             {profile.department && <p className="font-medium">{profile.department}</p>}
             <p className="mt-1">
               {language === 'bn' ? 'যোগদানের তারিখ: ' : 'Joined: '}{formatDate(profile.created_at)}

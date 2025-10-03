@@ -19,7 +19,16 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image ref={ref} className={cn("aspect-square h-full w-full", className)} {...props} />
+  // Use object-cover so the image fills the circular container without
+  // distorting aspect ratio. Keep h-full/w-full to match the Avatar size.
+  <AvatarPrimitive.Image
+    ref={ref}
+    // Ensure the image always covers the container without distortion. We
+    // use both Tailwind classes and an inline style fallback for objectFit.
+    className={cn("h-full w-full object-cover object-center min-w-0 min-h-0", className)}
+    {...props}
+  style={{ ...(props.style as React.CSSProperties), objectFit: (props.style as React.CSSProperties | undefined)?.objectFit ?? 'cover' }}
+  />
 ));
 AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 
