@@ -20,6 +20,7 @@ export type Database = {
           address_line2: string | null
           city: string | null
           created_at: string | null
+          current_position: string | null
           date_of_birth: string | null
           department: string | null
           designation: string | null
@@ -28,9 +29,11 @@ export type Database = {
           employee_id: string | null
           full_name: string
           gender: string | null
+          grade: string | null
           id: string
           id_proof_url: string | null
           is_verified: boolean | null
+          joining_date: string | null
           nid_number: string | null
           office_name: string | null
           passport_photo_url: string | null
@@ -45,6 +48,7 @@ export type Database = {
           address_line2?: string | null
           city?: string | null
           created_at?: string | null
+          current_position?: string | null
           date_of_birth?: string | null
           department?: string | null
           designation?: string | null
@@ -53,9 +57,11 @@ export type Database = {
           employee_id?: string | null
           full_name: string
           gender?: string | null
+          grade?: string | null
           id: string
           id_proof_url?: string | null
           is_verified?: boolean | null
+          joining_date?: string | null
           nid_number?: string | null
           office_name?: string | null
           passport_photo_url?: string | null
@@ -70,6 +76,7 @@ export type Database = {
           address_line2?: string | null
           city?: string | null
           created_at?: string | null
+          current_position?: string | null
           date_of_birth?: string | null
           department?: string | null
           designation?: string | null
@@ -78,9 +85,11 @@ export type Database = {
           employee_id?: string | null
           full_name?: string
           gender?: string | null
+          grade?: string | null
           id?: string
           id_proof_url?: string | null
           is_verified?: boolean | null
+          joining_date?: string | null
           nid_number?: string | null
           office_name?: string | null
           passport_photo_url?: string | null
