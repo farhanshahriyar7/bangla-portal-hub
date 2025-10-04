@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      office_information: {
+        Row: {
+          birth_place: string
+          created_at: string
+          directorate: string
+          district: string
+          id: string
+          identity_number: string | null
+          ministry: string
+          nid: string
+          status: string
+          tin: string | null
+          upazila: string
+          updated_at: string
+          user_id: string
+          village: string
+        }
+        Insert: {
+          birth_place: string
+          created_at?: string
+          directorate: string
+          district: string
+          id?: string
+          identity_number?: string | null
+          ministry: string
+          nid: string
+          status?: string
+          tin?: string | null
+          upazila: string
+          updated_at?: string
+          user_id: string
+          village: string
+        }
+        Update: {
+          birth_place?: string
+          created_at?: string
+          directorate?: string
+          district?: string
+          id?: string
+          identity_number?: string | null
+          ministry?: string
+          nid?: string
+          status?: string
+          tin?: string | null
+          upazila?: string
+          updated_at?: string
+          user_id?: string
+          village?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address_line1: string | null

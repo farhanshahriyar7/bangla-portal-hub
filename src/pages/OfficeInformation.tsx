@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, Edit, Trash2, Plus, Menu, Bell } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -30,16 +31,19 @@ import { useNavigate } from "react-router-dom";
 
 interface OfficeInfoData {
   id: string;
+  user_id?: string;
   ministry: string;
   directorate: string;
-  identityNumber: string;
+  identity_number: string;
   nid: string;
   tin: string;
-  birthPlace: string;
+  birth_place: string;
   village: string;
   upazila: string;
   district: string;
   status: "active" | "pending" | "completed";
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface OfficeInformationProps {
@@ -57,65 +61,129 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
   const [formData, setFormData] = useState<Partial<OfficeInfoData>>({
     ministry: "",
     directorate: "",
-    identityNumber: "",
+    identity_number: "",
     nid: "",
     tin: "",
-    birthPlace: "",
+    birth_place: "",
     village: "",
     upazila: "",
     district: "",
   });
+  const [data, setData] = useState<OfficeInfoData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [data, setData] = useState<OfficeInfoData[]>([
-    {
-      id: "1",
-      ministry: "জনপ্রশাসন মন্ত্রণালয়",
-      directorate: "স্বাস্থ্য অধিদপ্তর",
-      identityNumber: "123456789",
-      nid: "1234567890123",
-      tin: "987654321012",
-      birthPlace: "ঢাকা",
-      village: "মোহাম্মদপুর",
-      upazila: "ঢাকা সদর",
-      district: "ঢাকা",
-      status: "active",
-    },
-  ]);
+  // Fetch data from database
+  useEffect(() => {
+    fetchOfficeInformation();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const newEntry: OfficeInfoData = {
-      id: Date.now().toString(),
-      ministry: formData.ministry || "",
-      directorate: formData.directorate || "",
-      identityNumber: formData.identityNumber || "",
-      nid: formData.nid || "",
-      tin: formData.tin || "",
-      birthPlace: formData.birthPlace || "",
-      village: formData.village || "",
-      upazila: formData.upazila || "",
-      district: formData.district || "",
-      status: "pending",
-    };
+  const fetchOfficeInformation = async () => {
+    try {
+      setLoading(true);
+      const { data: officeData, error } = await supabase
+        .from('office_information')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    setData([...data, newEntry]);
-    setIsDialogOpen(false);
-    setFormData({});
-    
-    toast({
-      title: language === 'bn' ? "সফলভাবে যোগ করা হয়েছে" : "Successfully Added",
-      description: language === 'bn' ? "নতুন তথ্য সংরক্ষিত হয়েছে" : "New information has been saved",
-    });
+      if (error) throw error;
+      
+      if (officeData) {
+        setData(officeData as OfficeInfoData[]);
+      }
+    } catch (error) {
+      console.error('Error fetching office information:', error);
+      toast({
+        title: language === 'bn' ? "ত্রুটি" : "Error",
+        description: language === 'bn' 
+          ? "তথ্য লোড করতে সমস্যা হয়েছে" 
+          : "Failed to load information",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setData(data.filter(item => item.id !== id));
-    toast({
-      title: language === 'bn' ? "মুছে ফেলা হয়েছে" : "Deleted",
-      description: language === 'bn' ? "তথ্য মুছে ফেলা হয়েছে" : "Information has been deleted",
-      variant: "destructive",
-    });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: language === 'bn' ? "ত্রুটি" : "Error",
+          description: language === 'bn' 
+            ? "অনুগ্রহ করে লগইন করুন" 
+            : "Please login first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('office_information')
+        .insert({
+          user_id: user.id,
+          ministry: formData.ministry || "",
+          directorate: formData.directorate || "",
+          identity_number: formData.identity_number || "",
+          nid: formData.nid || "",
+          tin: formData.tin || "",
+          birth_place: formData.birth_place || "",
+          village: formData.village || "",
+          upazila: formData.upazila || "",
+          district: formData.district || "",
+          status: "pending",
+        });
+
+      if (error) throw error;
+
+      await fetchOfficeInformation();
+      setIsDialogOpen(false);
+      setFormData({});
+      
+      toast({
+        title: language === 'bn' ? "সফলভাবে যোগ করা হয়েছে" : "Successfully Added",
+        description: language === 'bn' ? "নতুন তথ্য সংরক্ষিত হয়েছে" : "New information has been saved",
+      });
+    } catch (error) {
+      console.error('Error adding office information:', error);
+      toast({
+        title: language === 'bn' ? "ত্রুটি" : "Error",
+        description: language === 'bn' 
+          ? "তথ্য সংরক্ষণ করতে সমস্যা হয়েছে" 
+          : "Failed to save information",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('office_information')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await fetchOfficeInformation();
+      toast({
+        title: language === 'bn' ? "মুছে ফেলা হয়েছে" : "Deleted",
+        description: language === 'bn' ? "তথ্য মুছে ফেলা হয়েছে" : "Information has been deleted",
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error('Error deleting office information:', error);
+      toast({
+        title: language === 'bn' ? "ত্রুটি" : "Error",
+        description: language === 'bn' 
+          ? "তথ্য মুছতে সমস্যা হয়েছে" 
+          : "Failed to delete information",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleView = (item: OfficeInfoData) => {
@@ -128,10 +196,10 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
     setFormData({
       ministry: item.ministry,
       directorate: item.directorate,
-      identityNumber: item.identityNumber,
+      identity_number: item.identity_number,
       nid: item.nid,
       tin: item.tin,
-      birthPlace: item.birthPlace,
+      birth_place: item.birth_place,
       village: item.village,
       upazila: item.upazila,
       district: item.district,
@@ -139,26 +207,48 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
     setEditDialogOpen(true);
   };
 
-  const handleUpdate = (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedItem) return;
 
-    const updatedData = data.map(item => 
-      item.id === selectedItem.id 
-        ? { ...item, ...formData }
-        : item
-    );
+    try {
+      const { error } = await supabase
+        .from('office_information')
+        .update({
+          ministry: formData.ministry,
+          directorate: formData.directorate,
+          identity_number: formData.identity_number,
+          nid: formData.nid,
+          tin: formData.tin,
+          birth_place: formData.birth_place,
+          village: formData.village,
+          upazila: formData.upazila,
+          district: formData.district,
+        })
+        .eq('id', selectedItem.id);
 
-    setData(updatedData);
-    setEditDialogOpen(false);
-    setFormData({});
-    setSelectedItem(null);
-    
-    toast({
-      title: language === 'bn' ? "সফলভাবে আপডেট করা হয়েছে" : "Successfully Updated",
-      description: language === 'bn' ? "তথ্য আপডেট হয়েছে" : "Information has been updated",
-    });
+      if (error) throw error;
+
+      await fetchOfficeInformation();
+      setEditDialogOpen(false);
+      setFormData({});
+      setSelectedItem(null);
+      
+      toast({
+        title: language === 'bn' ? "সফলভাবে আপডেট করা হয়েছে" : "Successfully Updated",
+        description: language === 'bn' ? "তথ্য আপডেট হয়েছে" : "Information has been updated",
+      });
+    } catch (error) {
+      console.error('Error updating office information:', error);
+      toast({
+        title: language === 'bn' ? "ত্রুটি" : "Error",
+        description: language === 'bn' 
+          ? "তথ্য আপডেট করতে সমস্যা হয়েছে" 
+          : "Failed to update information",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -285,13 +375,13 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="identityNumber">
+                          <Label htmlFor="identity_number">
                             {language === 'bn' ? 'পরিচিতি নম্বর (যদি থাকে)' : 'Identity Number (if any)'}
                           </Label>
                           <Input
-                            id="identityNumber"
-                            value={formData.identityNumber}
-                            onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value })}
+                            id="identity_number"
+                            value={formData.identity_number}
+                            onChange={(e) => setFormData({ ...formData, identity_number: e.target.value })}
                           />
                         </div>
 
@@ -319,13 +409,13 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="birthPlace">
+                          <Label htmlFor="birth_place">
                             {language === 'bn' ? 'জন্ম স্থান' : 'Birth Place'}
                           </Label>
                           <Input
-                            id="birthPlace"
-                            value={formData.birthPlace}
-                            onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
+                            id="birth_place"
+                            value={formData.birth_place}
+                            onChange={(e) => setFormData({ ...formData, birth_place: e.target.value })}
                             required
                           />
                         </div>
@@ -407,7 +497,13 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.length === 0 ? (
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            {language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
+                          </TableCell>
+                        </TableRow>
+                      ) : data.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                             {language === 'bn' ? 'কোন তথ্য পাওয়া যায়নি' : 'No data found'}
@@ -517,8 +613,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                 </Label>
                 <Input
                   id="edit-identityNumber"
-                  value={formData.identityNumber}
-                  onChange={(e) => setFormData({ ...formData, identityNumber: e.target.value })}
+                  value={formData.identity_number}
+                  onChange={(e) => setFormData({ ...formData, identity_number: e.target.value })}
                 />
               </div>
 
@@ -551,8 +647,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                 </Label>
                 <Input
                   id="edit-birthPlace"
-                  value={formData.birthPlace}
-                  onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
+                  value={formData.birth_place}
+                  onChange={(e) => setFormData({ ...formData, birth_place: e.target.value })}
                   required
                 />
               </div>
@@ -632,7 +728,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                 <p className="text-sm font-medium text-muted-foreground">
                   {language === 'bn' ? 'পরিচিতি নম্বর' : 'Identity Number'}
                 </p>
-                <p className="text-base font-medium">{selectedItem.identityNumber || 'N/A'}</p>
+                <p className="text-base font-medium">{selectedItem.identity_number || 'N/A'}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">
@@ -650,7 +746,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                 <p className="text-sm font-medium text-muted-foreground">
                   {language === 'bn' ? 'জন্ম স্থান' : 'Birth Place'}
                 </p>
-                <p className="text-base font-medium">{selectedItem.birthPlace}</p>
+                <p className="text-base font-medium">{selectedItem.birth_place}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">
