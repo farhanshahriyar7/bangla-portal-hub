@@ -16,9 +16,10 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 type Calendar22Props = {
   value?: Date | undefined
   onChange?: (date?: Date) => void
+  label?: string
+  id?: string
 }
-
-export function Calendar22({ value, onChange }: Calendar22Props) {
+export function Calendar22({ value, onChange, label, id }: Calendar22Props) {
   const [open, setOpen] = React.useState(false)
   const date = value
 
@@ -51,14 +52,11 @@ export function Calendar22({ value, onChange }: Calendar22Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Label htmlFor="date" className="px-1">
-        Date of birth
-      </Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            id="date"
+            id={id ?? 'date'}
             className="w-48 justify-between font-normal"
           >
             {date ? date.toLocaleDateString() : "Select date"}

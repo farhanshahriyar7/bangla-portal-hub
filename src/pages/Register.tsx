@@ -21,23 +21,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // Validation schemas for each step
 const step1Schema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   phone: z.string().min(11, 'Phone number must be at least 11 digits'),
   dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
   gender: z.enum(['male', 'female'], { required_error: 'Gender is required' }),
   nidNumber: z.string().min(10, 'NID number must be at least 10 characters'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
 });
 
 const step2Schema = z.object({
   designation: z.string().min(2, 'Designation is required'),
   department: z.string().min(2, 'Department is required'),
-  officeName: z.string().min(2, 'Office name is required'),
-  employeeId: z.string().min(2, 'Employee ID is required'),
+  employeeId: z.string().min(2, "employee id is required"),
+  grade: z.string().min(2, "grade is required"),
+  joiningDate: z.string().min(2, "joining date is required"),
+  currentPosition: z.string().min(2, "current position is required")
 });
 
 const step3Schema = z.object({
@@ -68,7 +65,9 @@ export default function Register() {
     employeeId: '',
     designation: '',
     department: '',
-    officeName: '',
+    grade: '',
+    joiningDate: '' as string | undefined,
+    currentPosition: '',
     addressLine1: '',
     addressLine2: '',
     city: '',
@@ -94,7 +93,7 @@ export default function Register() {
   const validateStep = (stepNumber: number): boolean => {
     try {
       setErrors({});
-      
+
       if (stepNumber === 1) {
         step1Schema.parse(formData);
       } else if (stepNumber === 2) {
@@ -102,6 +101,18 @@ export default function Register() {
       } else if (stepNumber === 3) {
         step3Schema.parse(formData);
       } else if (stepNumber === 4) {
+        // Password checks
+        if (!formData.password || String(formData.password).length < 8) {
+          setErrors({ password: 'Password must be at least 8 characters' });
+          return false;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          setErrors({ confirmPassword: "Passwords don't match" });
+          return false;
+        }
+
+        // File checks
         if (!idProofFile || !passportPhotoFile) {
           setErrors({
             files: 'Both ID proof and passport photo are required',
@@ -109,7 +120,7 @@ export default function Register() {
           return false;
         }
       }
-      
+
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -138,7 +149,7 @@ export default function Register() {
   const handleFileUpload = async (file: File, bucket: string, userId: string): Promise<string | null> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Math.random()}.${fileExt}`;
-    
+
     const { error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(fileName, file);
@@ -223,7 +234,7 @@ export default function Register() {
       }
 
       // Upload files
-      const idProofUrl = idProofFile 
+      const idProofUrl = idProofFile
         ? await handleFileUpload(idProofFile, 'id-proofs', authData.user.id)
         : null;
       const passportPhotoUrl = passportPhotoFile
@@ -244,7 +255,9 @@ export default function Register() {
           employee_id: formData.employeeId || null,
           designation: formData.designation,
           department: formData.department,
-          office_name: formData.officeName,
+          grade: formData.grade || null,
+          joining_date: formData.joiningDate || null,
+          current_position: formData.currentPosition || null,
           address_line1: formData.addressLine1,
           address_line2: formData.addressLine2,
           city: formData.city,
@@ -293,12 +306,30 @@ export default function Register() {
             Gazetted Officers' E-Job Portal
           </CardTitle>
           <CardDescription className="text-center">
-            Step {step} of 4: {
-              step === 1 ? 'Personal Information' :
-              step === 2 ? 'Professional Details' :
-              step === 3 ? 'Address Information' :
-              'Document Upload'
-            }
+            Step {step} of 4: {' '}
+            {step === 1 ? (
+              // 'Personal Information'
+              <div>
+                <p className='font-bold'>Personal Information</p>
+                <p>Basic personal details</p>
+              </div>
+            ) : step === 2 ? (
+              // 'Professional Details'
+              <div>
+                <p className='font-bold'>Professional Details</p>
+                <p>Employment information</p>
+              </div>
+            ) : step === 3 ? (
+              <div>
+                <p className='font-bold'>Address Information</p>
+                <p>Contact and address details</p>
+              </div>
+            ) : (
+              <>
+                <div className='font-bold'>Security Setup</div>
+                <div>Password and verification</div>
+              </>
+            )}
           </CardDescription>
           <Progress value={progress} className="mt-4" />
         </CardHeader>
@@ -306,7 +337,7 @@ export default function Register() {
         <CardContent className="space-y-6">
           {/* Step 1: Personal Information */}
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-4 p-6 bg-background/5 rounded-lg border">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name *</Label>
@@ -343,8 +374,12 @@ export default function Register() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth" className="px-1">
+                    Date of birth
+                  </Label>
                   <div>
                     <Calendar22
+                      id="dateOfBirth"
                       value={formData.dateOfBirth}
                       onChange={(date) => handleInputChange('dateOfBirth', date)}
                     />
@@ -376,40 +411,13 @@ export default function Register() {
                   />
                   {errors.nidNumber && <p className="text-sm text-destructive">{errors.nidNumber}</p>}
                 </div>
-
-                {/* password */}
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    placeholder="••••••••"
-                  />
-                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                </div>
-
-                {/* confirm password */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    placeholder="••••••••"
-                  />
-                  {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
-                </div>
-
               </div>
             </div>
           )}
 
           {/* Step 2: Professional Details */}
           {step === 2 && (
-            <div className="space-y-4">
+            <div className="space-y-4 p-6 bg-background/5 rounded-lg border">
               <div className="space-y-2">
                 <Label htmlFor="designation">Designation *</Label>
                 <Input
@@ -443,15 +451,48 @@ export default function Register() {
                 {errors.employeeId && <p className="text-sm text-destructive">{errors.employeeId}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="officeName">Office Name *</Label>
-                <Input
-                  id="officeName"
-                  value={formData.officeName}
-                  onChange={(e) => handleInputChange('officeName', e.target.value)}
-                  placeholder="Your office name"
-                />
-                {errors.officeName && <p className="text-sm text-destructive">{errors.officeName}</p>}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="grade">Grade</Label>
+                  <Select value={formData.grade} onValueChange={(value) => handleInputChange('grade', value)}>
+                    <SelectTrigger id="grade">
+                      <SelectValue placeholder="Select grade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Grade-9">Grade-9</SelectItem>
+                      <SelectItem value="Grade-10">Grade-10</SelectItem>
+                      <SelectItem value="Grade-13">Grade-13</SelectItem>
+                      <SelectItem value="Grade-14">Grade-14</SelectItem>
+                      <SelectItem value="Grade-15">Grade-15</SelectItem>
+                      <SelectItem value="Grade-16">Grade-16</SelectItem>
+                      <SelectItem value="Grade-17">Grade-17</SelectItem>
+                      <SelectItem value="Grade-20">Grade-20</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.grade && <p className="text-sm text-destructive">{errors.grade}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="joiningDate">Joining Date</Label>
+                  <Calendar22
+                    id="joiningDate"
+                    label="Joining Date"
+                    value={formData.joiningDate ? new Date(formData.joiningDate) : undefined}
+                    onChange={(date) => handleInputChange('joiningDate', date ? date.toISOString().split('T')[0] : undefined)}
+                  />
+                  {errors.joiningDate && <p className="text-sm text-destructive">{errors.joiningDate}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="currentPosition">Current Position</Label>
+                  <Input
+                    id="currentPosition"
+                    value={formData.currentPosition}
+                    onChange={(e) => handleInputChange('currentPosition', e.target.value)}
+                    placeholder="Your current position/title"
+                  />
+                  {errors.currentPosition && <p className="text-sm text-destructive">{errors.currentPosition}</p>}
+                </div>
               </div>
             </div>
           )}
@@ -520,6 +561,32 @@ export default function Register() {
           {/* Step 4: Document Upload */}
           {step === 4 && (
             <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* password fields moved to Security Setup step */}
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="••••••••"
+                  />
+                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    placeholder="••••••••"
+                  />
+                  {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="idProof">ID Proof (Official ID) *</Label>
                 <div className="border-2 border-dashed rounded-lg p-6 text-center">
