@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import OfficeInformation from "./pages/OfficeInformation";
+import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PendingApproval from "./pages/PendingApproval";
@@ -31,6 +32,7 @@ const App = () => {
               <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/office-information" element={<ProtectedRoute><OfficeInformation language={language} /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings language={language} /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
