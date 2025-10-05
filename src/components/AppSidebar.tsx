@@ -25,32 +25,38 @@ export function AppSidebar({
     url: '/',
     icon: Home,
     section: 'dashboard'
-  }, {
-    title: language === 'bn' ? 'ব্যক্তিগত তথ্য' : 'Personal Info',
-    url: '/personal',
-    icon: User,
-    section: 'personal'
-  }, {
+  }, 
+  // {
+  //   title: language === 'bn' ? 'ব্যক্তিগত তথ্য' : 'Personal Info',
+  //   url: '/personal',
+  //   icon: User,
+  //   section: 'personal'
+  // }
+  // , 
+  {
     title: language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information',
     url: '/office-information',
     icon: Building2,
     section: 'office-information'
-  }, {
-    title: language === 'bn' ? 'পেশাগত তথ্য' : 'Professional Data',
-    url: '/professional',
-    icon: Building2,
-    section: 'professional'
-  }, {
-    title: language === 'bn' ? 'নথিপত্র' : 'Documents',
-    url: '/documents',
-    icon: FileText,
-    section: 'documents'
-  }, {
-    title: language === 'bn' ? 'ছুটির আবেদন' : 'Leave Application',
-    url: '/leave',
-    icon: Calendar,
-    section: 'leave'
-  }];
+  }, 
+  // {
+  //   title: language === 'bn' ? 'পেশাগত তথ্য' : 'Professional Data',
+  //   url: '/professional',
+  //   icon: Building2,
+  //   section: 'professional'
+  // }, 
+  // {
+  //   title: language === 'bn' ? 'নথিপত্র' : 'Documents',
+  //   url: '/documents',
+  //   icon: FileText,
+  //   section: 'documents'
+  // }, {
+  //   title: language === 'bn' ? 'ছুটির আবেদন' : 'Leave Application',
+  //   url: '/leave',
+  //   icon: Calendar,
+  //   section: 'leave'
+  // }
+];
   const toolsMenuItems = [{
     title: language === 'bn' ? 'আপলোড' : 'Upload',
     url: '/upload',

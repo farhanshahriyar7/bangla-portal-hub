@@ -28,6 +28,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useNavigate } from "react-router-dom";
+import { CopyRights } from "@/components/CopyRights";
 
 interface OfficeInfoData {
   id: string;
@@ -41,7 +42,7 @@ interface OfficeInfoData {
   village: string;
   upazila: string;
   district: string;
-  status: "active" | "pending" | "completed";
+  status: "active" | "pending" | "rejected";
   created_at?: string;
   updated_at?: string;
 }
@@ -255,7 +256,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", text: string }> = {
       active: { variant: "default", text: language === 'bn' ? "সক্রিয়" : "Active" },
       pending: { variant: "secondary", text: language === 'bn' ? "প্রক্রিয়াধীন" : "Pending" },
-      completed: { variant: "outline", text: language === 'bn' ? "সম্পন্ন" : "Completed" },
+      rejected: { variant: "destructive", text: language === 'bn' ? "বাতিল" : "Rejected" },
+      // completed: { variant: "outline", text: language === 'bn' ? "সম্পন্ন" : "Completed" },
     };
     
     const statusInfo = variants[status] || variants.active;
@@ -265,6 +267,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
   const handleNavigation = (section: string) => {
     if (section === 'dashboard') {
       navigate('/');
+      return;
+    }
+
+    if (section === 'settings') {
+      navigate('/settings');
       return;
     }
     
@@ -558,10 +565,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
           {/* Footer */}
           <footer className="border-t border-border bg-card/50 py-4 px-6 text-center">
             <p className="text-sm text-muted-foreground">
-              {language === 'bn' 
+              <CopyRights/>
+              {/* {language === 'bn' 
                 ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার | তথ্য ও যোগাযোগ প্রযুক্তি বিভাগ'
                 : 'Government of the People\'s Republic of Bangladesh | ICT Division'
-              }
+              } */}
             </p>
           </footer>
         </SidebarInset>
