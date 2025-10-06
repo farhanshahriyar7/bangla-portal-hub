@@ -252,7 +252,7 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
                           <p className="text-sm text-muted-foreground">
                             {emailVerified 
                               ? (language === 'bn' ? 'যাচাইকৃত' : 'Verified')
-                              : (language === 'bn' ? 'যাচাই করা হয়নি' : 'Not verified')}
+                              : (language === 'bn' ? 'অপ্রত্যয়িত' : 'Unverified')}
                           </p>
                         </div>
                       </div>
@@ -263,7 +263,7 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
                           disabled={sending}
                         >
                           {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          {language === 'bn' ? 'পাঠান' : 'Send'}
+                          {language === 'bn' ? 'নিশ্চিত করুন' : 'Confirm Email'}
                         </Button>
                       )}
                     </div>
