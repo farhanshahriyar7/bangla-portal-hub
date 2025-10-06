@@ -5,6 +5,8 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
+
 interface AppSidebarProps {
   language: 'bn' | 'en';
   onNavigate: (section: string) => void;
