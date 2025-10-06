@@ -13,6 +13,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useNavigate } from "react-router-dom";
+import { CopyRights } from "@/components/CopyRights";
 
 interface SettingsProps {
   language: 'bn' | 'en';
@@ -115,7 +116,7 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
       const { error } = await supabase
@@ -201,8 +202,8 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
               <div className="flex-1" />
 
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleNavigation('notifications')}
                   className="relative"
@@ -210,9 +211,9 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
                   <Bell className="h-4 w-4" />
                   <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full"></span>
                 </Button>
-                <LanguageToggle 
-                  onLanguageChange={setLanguage} 
-                  currentLanguage={language} 
+                <LanguageToggle
+                  onLanguageChange={setLanguage}
+                  currentLanguage={language}
                 />
                 <ThemeToggle />
               </div>
@@ -250,7 +251,7 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
                         <div>
                           <p className="font-medium">{user?.email}</p>
                           <p className="text-sm text-muted-foreground">
-                            {emailVerified 
+                            {emailVerified
                               ? (language === 'bn' ? 'যাচাইকৃত' : 'Verified')
                               : (language === 'bn' ? 'অপ্রত্যয়িত' : 'Unverified')}
                           </p>
@@ -319,7 +320,7 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
                           <SelectContent>
                             <SelectItem value="male">{language === 'bn' ? 'পুরুষ' : 'Male'}</SelectItem>
                             <SelectItem value="female">{language === 'bn' ? 'মহিলা' : 'Female'}</SelectItem>
-                            <SelectItem value="other">{language === 'bn' ? 'অন্যান্য' : 'Other'}</SelectItem>
+                            {/* <SelectItem value="other">{language === 'bn' ? 'অন্যান্য' : 'Other'}</SelectItem> */}
                           </SelectContent>
                         </Select>
                       </div>
@@ -403,11 +404,26 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
                       </div>
                       <div className="space-y-2">
                         <Label>{language === 'bn' ? 'গ্রেড' : 'Grade'}</Label>
-                        <Input
+                        {/* <Input
                           value={formData.grade}
                           onChange={(e) => handleChange('grade', e.target.value)}
                           placeholder={language === 'bn' ? 'গ্রেড লিখুন' : 'Enter grade'}
-                        />
+                        /> */}
+                        <Select value={formData.grade} onValueChange={(value) => handleChange('grade', value)}>
+                          <SelectTrigger id="grade">
+                            <SelectValue placeholder="Select grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Grade-9">Grade-9</SelectItem>
+                            <SelectItem value="Grade-10">Grade-10</SelectItem>
+                            <SelectItem value="Grade-13">Grade-13</SelectItem>
+                            <SelectItem value="Grade-14">Grade-14</SelectItem>
+                            <SelectItem value="Grade-15">Grade-15</SelectItem>
+                            <SelectItem value="Grade-16">Grade-16</SelectItem>
+                            <SelectItem value="Grade-17">Grade-17</SelectItem>
+                            <SelectItem value="Grade-20">Grade-20</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label>{language === 'bn' ? 'পদবী' : 'Designation'}</Label>
@@ -474,10 +490,11 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
 
           <footer className="border-t border-border bg-card/50 py-4 px-6 text-center">
             <p className="text-sm text-muted-foreground">
-              {language === 'bn' 
+              <CopyRights />
+              {/* {language === 'bn' 
                 ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার | তথ্য ও যোগাযোগ প্রযুক্তি বিভাগ'
                 : 'Government of the People\'s Republic of Bangladesh | ICT Division'
-              }
+              } */}
             </p>
           </footer>
         </SidebarInset>

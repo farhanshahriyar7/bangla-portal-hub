@@ -42,7 +42,7 @@ interface OfficeInfoData {
   village: string;
   upazila: string;
   district: string;
-  status: "active" | "pending" | "rejected";
+  status: "pending" | "active" | "rejected";
   created_at?: string;
   updated_at?: string;
 }
