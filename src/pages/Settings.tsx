@@ -55,6 +55,16 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
       return;
     }
 
+    if (section === "security") {
+      navigate("/security");
+      return;
+    }
+
+    if (section === 'office-information') {
+      navigate('/office-information');
+      return;
+    }
+
     toast({
       title: language === 'bn' ? 'শীঘ্রই আসছে' : 'Coming Soon',
       description: language === 'bn' ? 'এই পেজটি শীঘ্রই উপলব্ধ হবে।' : 'This page will be available soon.',

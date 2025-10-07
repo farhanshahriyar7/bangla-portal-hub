@@ -195,10 +195,17 @@ const Index = () => {
       navigate("/office-information");
       return;
     }
+
+    if (section === "security") {
+      navigate("/security");
+      return;
+    }
+    
     if (section === "settings") {
       navigate("/settings");
       return;
     }
+
     if (section === "logout") {
       await signOut();
       toast({

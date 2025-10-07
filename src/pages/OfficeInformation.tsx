@@ -270,6 +270,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       return;
     }
 
+    if (section === "security") {
+      navigate("/security");
+      return;
+    }
+
     if (section === 'settings') {
       navigate('/settings');
       return;
