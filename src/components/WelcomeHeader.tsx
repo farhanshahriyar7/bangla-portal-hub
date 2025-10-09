@@ -169,7 +169,7 @@ export const WelcomeHeader = ({ language }: WelcomeHeaderProps) => {
               )}
 
               {profile.designation && (
-                <Badge variant="secondary" className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:text-primary-foreground/80 hover:bg-green-800">
+                <Badge variant="secondary" className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:text-primary-foreground/80 hover:bg-green-500">
                   {profile.designation}
                 </Badge>
               )}

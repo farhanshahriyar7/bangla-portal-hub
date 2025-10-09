@@ -43,7 +43,59 @@ const Security = ({ language = 'bn' }: SecurityProps) => {
         .single();
 
       if (error) throw error;
-      setProfileData(data);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const resolved: any = { ...data };
+
+      // Resolve passport photo URL
+      if (data?.passport_photo_url) {
+        const raw = data.passport_photo_url;
+        if (/^https?:\/\//i.test(raw)) {
+          // public or full URL — use as-is
+          resolved.passport_photo_url = raw;
+        } else {
+          // assume storage path in 'passport-photos' bucket
+          const path = raw.replace(/^\/+/, '');
+          try {
+            const { data: signedData, error: signErr } = await supabase.storage
+              .from('passport-photos')
+              .createSignedUrl(path, 3600);
+            if (!signErr && signedData?.signedUrl) {
+              resolved.passport_photo_url = signedData.signedUrl;
+            } else {
+              const { data: publicData } = supabase.storage.from('passport-photos').getPublicUrl(path);
+              resolved.passport_photo_url = publicData?.publicUrl || raw;
+            }
+          } catch (err) {
+            resolved.passport_photo_url = raw;
+          }
+        }
+      }
+
+      // Resolve id proof URL
+      if (data?.id_proof_url) {
+        const raw = data.id_proof_url;
+        if (/^https?:\/\//i.test(raw)) {
+          resolved.id_proof_url = raw;
+        } else {
+          const path = raw.replace(/^\/+/, '');
+          try {
+            const { data: signedData, error: signErr } = await supabase.storage
+              .from('id-proofs')
+              .createSignedUrl(path, 3600);
+            if (!signErr && signedData?.signedUrl) {
+              resolved.id_proof_url = signedData.signedUrl;
+            } else {
+              const { data: publicData } = supabase.storage.from('id-proofs').getPublicUrl(path);
+              resolved.id_proof_url = publicData?.publicUrl || raw;
+            }
+          } catch (err) {
+            resolved.id_proof_url = raw;
+          }
+        }
+      }
+
+      setProfileData(resolved);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -132,18 +184,41 @@ const Security = ({ language = 'bn' }: SecurityProps) => {
         .update({ passport_photo_url: publicUrl })
         .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        // Likely RLS policy prevented the update. Show the uploaded image immediately
+        // using the storage publicUrl so the user sees their upload, and notify about RLS.
+        console.warn('Profile update failed after storage upload:', updateError);
+        setProfileData(prev => ({ ...(prev || {}), passport_photo_url: publicUrl }));
+        toast({
+          title: language === 'bn' ? "অংশিক সফলতা" : "Partial success",
+          description: language === 'bn'
+            ? 'ফাইল স্টোরেজে আপলোড হয়েছে কিন্তু ডাটাবেস আপডেট করতে ব্যর্থ হয়েছে (RLS)। অ্যাডমিনের সঙ্গে যোগাযোগ করুন বা পলিসি আপডেট করুন।'
+            : 'File uploaded to storage but updating profile in the database failed due to RLS. Contact your admin or update the policy.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: language === 'bn' ? "সফল" : "Success",
+          description: language === 'bn' ? "ছবি সফলভাবে আপলোড করা হয়েছে" : "Photo uploaded successfully",
+        });
+      }
 
-      toast({
-        title: language === 'bn' ? "সফল" : "Success",
-        description: language === 'bn' ? "ছবি সফলভাবে আপলোড করা হয়েছে" : "Photo uploaded successfully",
-      });
-
+      // Refresh profile info (will include DB value if update succeeded)
       fetchProfileData();
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const getMsg = (e: unknown) => {
+        if (!e) return 'Unknown error';
+        if (typeof e === 'string') return e;
+        if (typeof e === 'object' && e !== null) {
+          const maybe = e as { message?: unknown };
+          if (typeof maybe.message === 'string') return maybe.message;
+        }
+        return String(e);
+      };
+      const msg = getMsg(err);
       toast({
         title: language === 'bn' ? "ত্রুটি" : "Error",
-        description: error.message,
+        description: msg,
         variant: "destructive",
       });
     } finally {
@@ -177,18 +252,38 @@ const Security = ({ language = 'bn' }: SecurityProps) => {
         .update({ id_proof_url: publicUrl })
         .eq('id', user.id);
 
-      if (updateError) throw updateError;
-
-      toast({
-        title: language === 'bn' ? "সফল" : "Success",
-        description: language === 'bn' ? "আইডি প্রুফ সফলভাবে আপলোড করা হয়েছে" : "ID proof uploaded successfully",
-      });
+      if (updateError) {
+        console.warn('Profile id_proof update failed after storage upload:', updateError);
+        setProfileData(prev => ({ ...(prev || {}), id_proof_url: publicUrl }));
+        toast({
+          title: language === 'bn' ? "অংশিক সফলতা" : "Partial success",
+          description: language === 'bn'
+            ? 'ডকুমেন্ট স্টোরেজে আপলোড হয়েছে কিন্তু ডাটাবেস আপডেট করতে ব্যর্থ হয়েছে (RLS)। অ্যাডমিনের সঙ্গে যোগাযোগ করুন বা পলিসি আপডেট করুন।'
+            : 'Document uploaded to storage but updating profile in the database failed due to RLS. Contact your admin or update the policy.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: language === 'bn' ? "সফল" : "Success",
+          description: language === 'bn' ? "আইডি প্রুফ সফলভাবে আপলোড করা হয়েছে" : "ID proof uploaded successfully",
+        });
+      }
 
       fetchProfileData();
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const getMsg = (e: unknown) => {
+        if (!e) return 'Unknown error';
+        if (typeof e === 'string') return e;
+        if (typeof e === 'object' && e !== null) {
+          const maybe = e as { message?: unknown };
+          if (typeof maybe.message === 'string') return maybe.message;
+        }
+        return String(e);
+      };
+      const msg = getMsg(err);
       toast({
         title: language === 'bn' ? "ত্রুটি" : "Error",
-        description: error.message,
+        description: msg,
         variant: "destructive",
       });
     } finally {
@@ -341,7 +436,7 @@ const Security = ({ language = 'bn' }: SecurityProps) => {
                 )}
                 <div>
                   <Label htmlFor="id-proof-upload" className="cursor-pointer">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 inline-flex">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
                       {uploadingIdProof ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (

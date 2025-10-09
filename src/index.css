@@ -18,8 +18,9 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Day Mode - Clean White Background */
-    --background: 0 0% 100%;
+    /* Day Mode - green-200 Background (Tailwind bg-green-200 equivalent) */
+    /* #bbf7d0 -> hsl(140 79% 85%) */
+    --background: 140 79% 85%;
     --foreground: 0 0% 0%;
 
     --card: 0 0% 100%;
@@ -28,10 +29,11 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 0%;
 
-    /* Government Green - Primary Accent */
-    --primary: 150 60% 25%;
+    /* Government Green - Primary Accent (adjusted to green-500 tone) */
+    /* Approx Tailwind green-500 */
+    --primary: 140 60% 45%;
     --primary-foreground: 0 0% 100%;
-    
+
     /* Light Variants */
     --secondary: 150 15% 95%;
     --secondary-foreground: 150 60% 25%;
@@ -48,23 +50,23 @@ All colors MUST be HSL.
     --border: 220 13% 91%;
     --input: 220 13% 91%;
     --ring: 150 60% 25%;
-    
+
     /* Success States */
     --success: 150 60% 40%;
     --success-foreground: 0 0% 100%;
-    
+
     /* Warning States */
     --warning: 45 90% 55%;
     --warning-foreground: 0 0% 0%;
-    
+
     /* Government Official Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(150 60% 25%), hsl(150 50% 35%));
+    --gradient-primary: linear-gradient(135deg, hsl(140 60% 45%), hsl(140 55% 50%));
     --gradient-secondary: linear-gradient(135deg, hsl(150 15% 95%), hsl(150 20% 92%));
-    
+
     /* Professional Shadows */
     --shadow-card: 0 2px 10px -3px hsl(150 60% 25% / 0.1);
     --shadow-form: 0 4px 20px -5px hsl(150 60% 25% / 0.15);
-    
+
     /* Smooth Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -117,19 +119,19 @@ All colors MUST be HSL.
     --border: 220 15% 20%;
     --input: 220 15% 15%;
     --ring: 150 60% 25%;
-    
+
     /* Dark Mode Success */
     --success: 150 55% 45%;
     --success-foreground: 0 0% 100%;
-    
+
     /* Dark Mode Warning */
     --warning: 45 85% 60%;
     --warning-foreground: 0 0% 0%;
-    
+
     /* Night Mode Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(150 60% 25%), hsl(150 50% 35%));
     --gradient-secondary: linear-gradient(135deg, hsl(220 15% 15%), hsl(220 15% 18%));
-    
+
     /* Dark Shadows */
     --shadow-card: 0 4px 15px -3px hsl(0 0% 0% / 0.3);
     --shadow-form: 0 8px 25px -5px hsl(0 0% 0% / 0.4);

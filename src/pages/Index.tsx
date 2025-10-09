@@ -282,7 +282,7 @@ const Index = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen w-full bg-background flex flex-col">
+      <div className="min-h-screen w-full bg-green-200 dark:bg-background flex flex-col">
         <div className="flex flex-1">
           {/* Sidebar */}
           <AppSidebar language={language} onNavigate={handleNavigation} />
