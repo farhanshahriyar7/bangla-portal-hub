@@ -103,7 +103,7 @@ export default function Login() {
       {/* Left: Cover image / agency logo */}
       <div
         className="hidden md:flex items-center justify-center bg-cover bg-center"
-        style={{ backgroundImage: "url('/NSI-logo.jpg')" }}
+        style={{ backgroundImage: "url('/images.png')" }}
         aria-hidden
       >
         {/* Slightly darker overlay so the white text is always readable over the image */}
@@ -135,7 +135,7 @@ export default function Login() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="yourofficialemail@nsi.gov.bd"
+                    placeholder="yourofficialemail@agency.gov.bd"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

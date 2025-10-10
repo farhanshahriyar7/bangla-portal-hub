@@ -16,20 +16,50 @@ interface SecurityProps {
   language?: 'bn' | 'en';
 }
 
+interface ProfileData {
+  passport_photo_url?: string | null;
+  id_proof_url?: string | null;
+  full_name?: string | null;
+}
+
 const Security = ({ language = 'bn' }: SecurityProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [profileData, setProfileData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingIdProof, setUploadingIdProof] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<'image' | 'pdf' | 'other' | null>(null);
 
+  const detectFileType = (url: string | undefined | null) => {
+    if (!url) return 'other' as const;
+    const lower = url.split('?')[0].split('#')[0].toLowerCase();
+    if (lower.match(/\.(jpg|jpeg|png|gif|webp)$/)) return 'image' as const;
+    if (lower.match(/\.(pdf)$/)) return 'pdf' as const;
+    // try mime from data url or fallback
+    return 'other' as const;
+  };
+
+  const openPreview = (url: string) => {
+    setPreviewType(detectFileType(url));
+    setPreviewUrl(url);
+  };
+
+  const closePreview = () => {
+    setPreviewUrl(null);
+    setPreviewType(null);
+  };
+
+  // memoize to avoid effect dependency issues
+  const fetchProfileDataCb = async () => await fetchProfileData();
   useEffect(() => {
-    fetchProfileData();
+    fetchProfileDataCb();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchProfileData = async () => {
@@ -44,8 +74,7 @@ const Security = ({ language = 'bn' }: SecurityProps) => {
 
       if (error) throw error;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const resolved: any = { ...data };
+    const resolved: ProfileData = { ...(data as ProfileData) };
 
       // Resolve passport photo URL
       if (data?.passport_photo_url) {
@@ -147,10 +176,20 @@ const Security = ({ language = 'bn' }: SecurityProps) => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const getMsg = (e: unknown) => {
+        if (!e) return 'Unknown error';
+        if (typeof e === 'string') return e;
+        if (typeof e === 'object' && e !== null) {
+          const maybe = e as { message?: unknown };
+          if (typeof maybe.message === 'string') return maybe.message;
+        }
+        return String(e);
+      };
+      const msg = getMsg(err);
       toast({
         title: language === 'bn' ? "ত্রুটি" : "Error",
-        description: error.message,
+        description: msg,
         variant: "destructive",
       });
     } finally {
@@ -424,14 +463,35 @@ const Security = ({ language = 'bn' }: SecurityProps) => {
                     <p className="text-sm text-muted-foreground mb-2">
                       {language === 'bn' ? 'বর্তমান ডকুমেন্ট' : 'Current Document'}
                     </p>
-                    <a 
-                      href={profileData.id_proof_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline text-sm"
-                    >
-                      {language === 'bn' ? 'ডকুমেন্ট দেখুন' : 'View Document'}
-                    </a>
+                    <div className="flex items-center gap-3">
+                      {detectFileType(profileData.id_proof_url) === 'image' ? (
+                        <img src={profileData.id_proof_url} alt="id-proof" className="h-16 w-16 object-cover rounded" />
+                      ) : detectFileType(profileData.id_proof_url) === 'pdf' ? (
+                        <div className="h-16 w-16 bg-slate-50 rounded flex items-center justify-center text-sm">PDF</div>
+                      ) : (
+                        <div className="h-16 w-16 bg-slate-50 rounded flex items-center justify-center text-sm">File</div>
+                      )}
+
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <a
+                            href={profileData.id_proof_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm"
+                          >
+                            {language === 'bn' ? 'ডকুমেন্ট দেখুন' : 'View Document'}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => openPreview(profileData.id_proof_url)}
+                            className="text-sm text-muted-foreground underline"
+                          >
+                            {language === 'bn' ? 'প্রিভিউ' : 'Preview'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
                 <div>
@@ -461,6 +521,23 @@ const Security = ({ language = 'bn' }: SecurityProps) => {
                 </div>
               </CardContent>
             </Card>
+            {/* Preview Modal */}
+            {previewUrl && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closePreview}>
+                <div className="bg-white max-w-3xl w-full max-h-[80vh] overflow-auto p-4 rounded" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-end mb-2">
+                    <button onClick={closePreview} className="text-muted-foreground">Close</button>
+                  </div>
+                  {previewType === 'image' && <img src={previewUrl} alt="preview" className="w-full h-auto" />}
+                  {previewType === 'pdf' && (
+                    <iframe title="pdf-preview" src={previewUrl} className="w-full h-[70vh]" />
+                  )}
+                  {previewType === 'other' && (
+                    <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-primary">Open file</a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>

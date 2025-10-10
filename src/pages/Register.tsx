@@ -357,7 +357,7 @@ export default function Register() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder="yourofficialemail@nsi.gov.bd"
+                    placeholder="yourofficialemail@agency.gov.bd"
                   />
                   {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
