@@ -87,7 +87,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       if (officeData) {
         setData(officeData as OfficeInfoData[]);
       }
@@ -95,8 +95,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       console.error('Error fetching office information:', error);
       toast({
         title: language === 'bn' ? "ত্রুটি" : "Error",
-        description: language === 'bn' 
-          ? "তথ্য লোড করতে সমস্যা হয়েছে" 
+        description: language === 'bn'
+          ? "তথ্য লোড করতে সমস্যা হয়েছে"
           : "Failed to load information",
         variant: "destructive",
       });
@@ -107,15 +107,15 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         toast({
           title: language === 'bn' ? "ত্রুটি" : "Error",
-          description: language === 'bn' 
-            ? "অনুগ্রহ করে লগইন করুন" 
+          description: language === 'bn'
+            ? "অনুগ্রহ করে লগইন করুন"
             : "Please login first",
           variant: "destructive",
         });
@@ -143,7 +143,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       await fetchOfficeInformation();
       setIsDialogOpen(false);
       setFormData({});
-      
+
       toast({
         title: language === 'bn' ? "সফলভাবে যোগ করা হয়েছে" : "Successfully Added",
         description: language === 'bn' ? "নতুন তথ্য সংরক্ষিত হয়েছে" : "New information has been saved",
@@ -152,8 +152,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       console.error('Error adding office information:', error);
       toast({
         title: language === 'bn' ? "ত্রুটি" : "Error",
-        description: language === 'bn' 
-          ? "তথ্য সংরক্ষণ করতে সমস্যা হয়েছে" 
+        description: language === 'bn'
+          ? "তথ্য সংরক্ষণ করতে সমস্যা হয়েছে"
           : "Failed to save information",
         variant: "destructive",
       });
@@ -179,8 +179,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       console.error('Error deleting office information:', error);
       toast({
         title: language === 'bn' ? "ত্রুটি" : "Error",
-        description: language === 'bn' 
-          ? "তথ্য মুছতে সমস্যা হয়েছে" 
+        description: language === 'bn'
+          ? "তথ্য মুছতে সমস্যা হয়েছে"
           : "Failed to delete information",
         variant: "destructive",
       });
@@ -210,7 +210,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedItem) return;
 
     try {
@@ -235,7 +235,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       setEditDialogOpen(false);
       setFormData({});
       setSelectedItem(null);
-      
+
       toast({
         title: language === 'bn' ? "সফলভাবে আপডেট করা হয়েছে" : "Successfully Updated",
         description: language === 'bn' ? "তথ্য আপডেট হয়েছে" : "Information has been updated",
@@ -244,8 +244,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       console.error('Error updating office information:', error);
       toast({
         title: language === 'bn' ? "ত্রুটি" : "Error",
-        description: language === 'bn' 
-          ? "তথ্য আপডেট করতে সমস্যা হয়েছে" 
+        description: language === 'bn'
+          ? "তথ্য আপডেট করতে সমস্যা হয়েছে"
           : "Failed to update information",
         variant: "destructive",
       });
@@ -259,7 +259,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       rejected: { variant: "destructive", text: language === 'bn' ? "বাতিল" : "Rejected" },
       // completed: { variant: "outline", text: language === 'bn' ? "সম্পন্ন" : "Completed" },
     };
-    
+
     const statusInfo = variants[status] || variants.active;
     return <Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>;
   };
@@ -279,10 +279,10 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       navigate('/settings');
       return;
     }
-    
+
     toast({
       title: language === 'bn' ? 'শীঘ্রই আসছে' : 'Coming Soon',
-      description: language === 'bn' 
+      description: language === 'bn'
         ? 'এই পেজটি শীঘ্রই উপলব্ধ হবে।'
         : 'This page will be available soon.',
     });
@@ -291,8 +291,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
   return (
     <SidebarProvider>
       <div className="min-h-screen w-full bg-background flex">
-        <AppSidebar 
-          language={language} 
+        <AppSidebar
+          language={language}
           onNavigate={handleNavigation}
         />
 
@@ -303,12 +303,12 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
               <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
                 <Menu className="h-4 w-4" />
               </SidebarTrigger>
-              
+
               <div className="flex-1" />
-              
+
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleNavigation('notifications')}
                   className="relative"
@@ -316,9 +316,9 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                   <Bell className="h-4 w-4" />
                   <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full"></span>
                 </Button>
-                <LanguageToggle 
-                  onLanguageChange={setLanguage} 
-                  currentLanguage={language} 
+                <LanguageToggle
+                  onLanguageChange={setLanguage}
+                  currentLanguage={language}
                 />
                 <ThemeToggle />
               </div>
@@ -335,8 +335,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                     {language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information'}
                   </h1>
                   <p className="text-muted-foreground mt-1">
-                    {language === 'bn' 
-                      ? 'আপনার দাপ্তরিক বিবরণী এবং সরকারি তথ্য পরিচালনা করুন' 
+                    {language === 'bn'
+                      ? 'আপনার দাপ্তরিক বিবরণী এবং সরকারি তথ্য পরিচালনা করুন'
                       : 'Manage your official details and government information'}
                   </p>
                 </div>
@@ -354,8 +354,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                         {language === 'bn' ? 'নতুন দাপ্তরিক তথ্য যোগ করুন' : 'Add New Office Information'}
                       </DialogTitle>
                       <DialogDescription>
-                        {language === 'bn' 
-                          ? 'নিচের ফর্মটি পূরণ করুন। সকল তথ্য সঠিকভাবে প্রদান করুন।' 
+                        {language === 'bn'
+                          ? 'নিচের ফর্মটি পূরণ করুন। সকল তথ্য সঠিকভাবে প্রদান করুন।'
                           : 'Fill in the form below. Provide all information accurately.'}
                       </DialogDescription>
                     </DialogHeader>
@@ -487,20 +487,20 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-green-800 text-white hover:bg-green-950 border-b-2 border-green-900 dark:border-green-700 shadow-sm">
-                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
+                      <TableRow className="bg-green-800 text-white hover:bg-green-950 border-b-[2px] border-green-900 dark:border-green-700 shadow-sm">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'অধিদপ্তর নাম' : 'Directorate Name'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'জেলা' : 'District'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'স্ট্যাটাস' : 'Status'}
                         </TableHead>
                         <TableHead className="font-semibold text-white text-right py-2 px-3 text-sm">
@@ -527,40 +527,40 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                             key={item.id}
                             className="odd:bg-white even:bg-blue-50 hover:bg-muted/30 transition-colors"
                           >
-                            <TableCell className="text-green-800 font-bold italic py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700">
+                            <TableCell className="text-green-800 font-bold italic py-2 px-3 text-sm border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
                               {item.ministry}
                             </TableCell>
-                            <TableCell className="py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
+                            <TableCell className="py-2 px-3 text-sm border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
                               {item.directorate}
                             </TableCell>
-                            <TableCell className="py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">{item.nid}</TableCell>
-                            <TableCell className="py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">{item.district}</TableCell>
-                            <TableCell className="py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700">{getStatusBadge(item.status)}</TableCell>
-                            <TableCell className="text-right py-1 px-2 border-b border-gray-200 dark:border-gray-700">
+                            <TableCell className="py-2 px-3 text-sm border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">{item.nid}</TableCell>
+                            <TableCell className="py-2 px-3 text-sm border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">{item.district}</TableCell>
+                            <TableCell className="py-2 px-3 text-sm border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">{getStatusBadge(item.status)}</TableCell>
+                            <TableCell className="text-right py-2 px-3 border-b-[1px] border-gray-200 dark:border-gray-700">
                               <div className="flex justify-end gap-2">
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleView(item)}
-                                  className="h-7 w-7 text-green-950 dark:text-green-200 hover:text-primary font-bold hover:bg-primary/10"
+                                  className="h-8 w-8 text-green-950 dark:text-green-200 hover:text-primary font-bold hover:bg-primary/10"
                                 >
-                                  <Eye className="h-3.5 w-3.5" />
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleEdit(item)}
-                                  className="h-7 w-7 text-green-600 dark:text-green-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                                  className="h-8 w-8 text-green-600 dark:text-green-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
                                 >
-                                  <Edit className="h-3.5 w-3.5" />
+                                  <Edit className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleDelete(item.id)}
-                                  className="h-7 w-7 text-destructive font-bold hover:text-destructive hover:bg-destructive/10 dark:text-destructive/80"
+                                  className="h-8 w-8 text-destructive font-bold hover:text-destructive hover:bg-destructive/10 dark:text-destructive/80"
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -577,7 +577,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
           {/* Footer */}
           <footer className="border-t border-border bg-card/50 py-4 px-6 text-center">
             <p className="text-sm text-muted-foreground">
-              <CopyRights/>
+              <CopyRights />
               {/* {language === 'bn' 
                 ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার | তথ্য ও যোগাযোগ প্রযুক্তি বিভাগ'
                 : 'Government of the People\'s Republic of Bangladesh | ICT Division'
@@ -595,8 +595,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
               {language === 'bn' ? 'দাপ্তরিক তথ্য সম্পাদনা' : 'Edit Office Information'}
             </DialogTitle>
             <DialogDescription>
-              {language === 'bn' 
-                ? 'তথ্য আপডেট করুন। সকল তথ্য সঠিকভাবে প্রদান করুন।' 
+              {language === 'bn'
+                ? 'তথ্য আপডেট করুন। সকল তথ্য সঠিকভাবে প্রদান করুন।'
                 : 'Update the information. Provide all information accurately.'}
             </DialogDescription>
           </DialogHeader>
