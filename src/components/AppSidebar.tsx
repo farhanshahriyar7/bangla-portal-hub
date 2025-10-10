@@ -316,7 +316,7 @@ export function AppSidebar({
     <SidebarFooter className="p-2 border-t border-border">
       {!collapsed ? <div className="space-y-2">
         {/* User Profile */}
-        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors">
+        <div className="flex items-center gap-3 p-2 rounded-lg transition-colors">
           <Avatar className="h-8 w-8">
             {avatarUrl ? (
               <AvatarImage src={avatarUrl} />
@@ -327,7 +327,7 @@ export function AppSidebar({
             )}
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-card-foreground truncate">
+            <p className="text-xs font-medium text-card-foreground truncate ">
               {employeeData.name}
             </p>
             <p className="text-xs text-muted-foreground truncate">

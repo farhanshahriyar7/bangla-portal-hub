@@ -18,9 +18,8 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Day Mode - green-200 Background (Tailwind bg-green-200 equivalent) */
-    /* #bbf7d0 -> hsl(140 79% 85%) */
-    --background: 140 79% 85%;
+    /* Day Mode - White Background */
+    --background: 0 0% 100%;
     --foreground: 0 0% 0%;
 
     --card: 0 0% 100%;
@@ -29,9 +28,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 0%;
 
-    /* Government Green - Primary Accent (adjusted to green-500 tone) */
-    /* Approx Tailwind green-500 */
-    --primary: 140 60% 45%;
+    /* Government Green */
+    --primary: 150 60% 25%;
     --primary-foreground: 0 0% 100%;
 
     /* Light Variants */
@@ -60,7 +58,7 @@ All colors MUST be HSL.
     --warning-foreground: 0 0% 0%;
 
     /* Government Official Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(140 60% 45%), hsl(140 55% 50%));
+     --gradient-primary: linear-gradient(135deg, hsl(150 60% 25%), hsl(150 50% 35%));
     --gradient-secondary: linear-gradient(135deg, hsl(150 15% 95%), hsl(150 20% 92%));
 
     /* Professional Shadows */

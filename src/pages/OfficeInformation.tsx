@@ -345,7 +345,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                   <DialogTrigger asChild>
                     <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
                       <Plus className="h-4 w-4 mr-2" />
-                      {language === 'bn' ? 'নতুন তথ্য যোগ করুন' : 'Add New Information'}
+                      {language === 'bn' ? 'নতুন তথ্য' : 'New Information'}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
