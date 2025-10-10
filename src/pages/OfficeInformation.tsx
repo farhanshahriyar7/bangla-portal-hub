@@ -488,22 +488,22 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-green-800 text-white hover:bg-green-950 border-b-2 border-green-900 dark:border-green-700 shadow-sm">
-                        <TableHead className="font-semibold text-white border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'অধিদপ্তর নাম' : 'Directorate Name'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'জেলা' : 'District'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white border-r border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-white py-2 px-3 text-sm border-r border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'স্ট্যাটাস' : 'Status'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white text-right">
+                        <TableHead className="font-semibold text-white text-right py-2 px-3 text-sm">
                           {language === 'bn' ? 'কার্যক্রম' : 'Actions'}
                         </TableHead>
                       </TableRow>
@@ -527,40 +527,40 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                             key={item.id}
                             className="odd:bg-white even:bg-blue-50 hover:bg-muted/30 transition-colors"
                           >
-                            <TableCell className="text-green-800 font-bold italic py-2 px-3 text-sm border-b border-r border-gray-200 dark:border-gray-700">
+                            <TableCell className="text-green-800 font-bold italic py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700">
                               {item.ministry}
                             </TableCell>
-                            <TableCell className="py-2 px-3 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
+                            <TableCell className="py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
                               {item.directorate}
                             </TableCell>
-                            <TableCell className="py-2 px-3 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">{item.nid}</TableCell>
-                            <TableCell className="py-2 px-3 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">{item.district}</TableCell>
-                            <TableCell className="py-2 px-3 text-sm border-b border-r border-gray-200 dark:border-gray-700">{getStatusBadge(item.status)}</TableCell>
-                            <TableCell className="text-right py-2 px-3 border-b border-gray-200 dark:border-gray-700">
+                            <TableCell className="py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">{item.nid}</TableCell>
+                            <TableCell className="py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">{item.district}</TableCell>
+                            <TableCell className="py-1 px-2 text-sm border-b border-r border-gray-200 dark:border-gray-700">{getStatusBadge(item.status)}</TableCell>
+                            <TableCell className="text-right py-1 px-2 border-b border-gray-200 dark:border-gray-700">
                               <div className="flex justify-end gap-2">
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleView(item)}
-                                  className="h-8 w-8 text-green-950 dark:text-green-200 hover:text-primary font-bold hover:bg-primary/10"
+                                  className="h-7 w-7 text-green-950 dark:text-green-200 hover:text-primary font-bold hover:bg-primary/10"
                                 >
-                                  <Eye className="h-4 w-4" />
+                                  <Eye className="h-3.5 w-3.5" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleEdit(item)}
-                                  className="h-8 w-8 text-green-600 dark:text-green-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                                  className="h-7 w-7 text-green-600 dark:text-green-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
                                 >
-                                  <Edit className="h-4 w-4" />
+                                  <Edit className="h-3.5 w-3.5" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleDelete(item.id)}
-                                  className="h-8 w-8 text-destructive font-bold hover:text-destructive hover:bg-destructive/10 dark:text-destructive/80"
+                                  className="h-7 w-7 text-destructive font-bold hover:text-destructive hover:bg-destructive/10 dark:text-destructive/80"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
                             </TableCell>
