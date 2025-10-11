@@ -483,27 +483,27 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
               </div>
 
               {/* Table */}
-              <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+              <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden  text-center">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-green-800 text-white hover:bg-green-950 border-b-[2px] border-green-900 dark:border-green-700 shadow-sm">
-                        <TableHead className="font-semibold text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                      <TableRow className="bg-green-800 text-white hover:bg-green-800 border-b-[2px] border-green-900 dark:border-green-700 shadow-sm">
+                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
-                          {language === 'bn' ? 'অধিদপ্তর নাম' : 'Directorate Name'}
+                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                          {language === 'bn' ? 'অফিসের নাম' : 'Office Name'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'জেলা' : 'District'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'স্ট্যাটাস' : 'Status'}
                         </TableHead>
-                        <TableHead className="font-semibold text-white text-right py-0.5 px-2 text-xs">
+                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs">
                           {language === 'bn' ? 'কার্যক্রম' : 'Actions'}
                         </TableHead>
                       </TableRow>
@@ -543,7 +543,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                               {getStatusBadge(item.status)}
                             </TableCell>
                             <TableCell className="text-right py-0.5 px-2 border-b-[1px] border-gray-200 dark:border-gray-700">
-                              <div className="flex justify-end gap-1">
+                              <div className="flex justify-center gap-1">
                                 <Button
                                   variant="ghost"
                                   size="icon"
