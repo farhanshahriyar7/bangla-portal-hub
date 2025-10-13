@@ -220,6 +220,9 @@ export function AppSidebar({
           <p className="text-xs text-muted-foreground truncate">
             {language === 'bn' ? 'গেজেটেড সরকারি কর্মচারীগণ' : 'Gazetted Govt. Employees'}
           </p>
+          <p className="text-xs text-muted-foreground truncate">
+            {/* soon it gonna be used for admin */}
+          </p>
         </div>
       </div> : <div className="flex justify-center">
         <div className="p-2 rounded-lg bg-gradient-primary">

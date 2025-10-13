@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Eye, Edit, Trash2, Plus, Menu, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from '@/components/ui/toast';
+import type { ToastActionElement } from '@/components/ui/toast';
 import { useAuth } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
@@ -54,7 +56,7 @@ interface OfficeInformationProps {
 }
 
 export default function OfficeInformation({ language: initialLanguage }: OfficeInformationProps) {
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const navigate = useNavigate();
   const [language, setLanguage] = useState<'bn' | 'en'>(initialLanguage);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,6 +80,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmIds, setConfirmIds] = useState<string[]>([]);
   const [confirmMode, setConfirmMode] = useState<'single' | 'selected' | 'all' | null>(null);
+  // Map of id -> timeout so we can undo scheduled deletes (persist across renders)
+  const pendingDeletesRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   // Fetch data from database
   const fetchOfficeInformation = async () => {
@@ -344,7 +348,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
     setConfirmOpen(true);
   };
 
-  const performDeleteByIds = async (ids: string[]) => {
+  // perform actual backend deletion. If silent is true, don't show an additional toast
+  const performDeleteByIds = async (ids: string[], silent = false) => {
     try {
       const { error } = await supabase
         .from('office_information')
@@ -357,20 +362,86 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
       setConfirmOpen(false);
 
-      toast({
-        title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
-        description:
-          language === 'bn'
-            ? (ids.length > 1 ? 'নির্বাচিত আইটেমগুলো মুছে ফেলা হয়েছে' : 'আইটেম মুছে ফেলা হয়েছে')
-            : (ids.length > 1 ? 'Selected items were deleted' : 'Item was deleted'),
-        variant: 'destructive',
-      });
+      if (!silent) {
+        toast({
+          title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
+          description:
+            language === 'bn'
+              ? (ids.length > 1 ? 'নির্বাচিত আইটেমগুলো মুছে ফেলা হয়েছে' : 'আইটেম মুছে ফেলা হয়েছে')
+              : (ids.length > 1 ? 'Selected items were deleted' : 'Item was deleted'),
+          variant: 'destructive',
+        });
+      }
     } catch (error) {
       console.error('Error deleting office information:', error);
       toast({
         title: language === 'bn' ? 'ত্রুটি' : 'Error',
         description: language === 'bn' ? 'মুছতে ব্যর্থ হয়েছে' : 'Failed to delete items',
         variant: 'destructive',
+      });
+    }
+  };
+
+  // Schedule delete with undo window (8 seconds). Removes items from UI optimistically and shows undo toast.
+  const scheduleDelete = (ids: string[]) => {
+    // Optimistically remove from UI
+    setData((prev) => prev.filter((d) => !ids.includes(d.id)));
+    setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+
+    // For each id, create a timeout that will call performDeleteByIds after delay
+    const delay = 8000; // 8 seconds undo window
+
+    ids.forEach((id) => {
+      const pendingDeletes = pendingDeletesRef.current;
+      if (pendingDeletes.has(id)) {
+        clearTimeout(pendingDeletes.get(id)!);
+        pendingDeletes.delete(id);
+      }
+
+      const timeout = setTimeout(() => {
+        // when timeout fires, perform backend delete for this id
+        performDeleteByIds([id], true).catch((e) => console.error(e));
+        pendingDeletes.delete(id);
+      }, delay);
+
+      pendingDeletes.set(id, timeout);
+    });
+
+    // Show toast with Undo action
+    const toastInstance = toast({
+      title: language === 'bn' ? 'আইটেম মুছে ফেলা হচ্ছে' : 'Item(s) scheduled for deletion',
+      description:
+        language === 'bn'
+          ? 'আপনি ৮ সেকেন্ডের মধ্যে পূর্বাবস্থায় ফেরাতে পারবেন।'
+          : 'You can undo within 8 seconds.',
+      action: (
+        <ToastAction altText={language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'} onClick={() => {
+          // Undo all ids in this batch
+          ids.forEach((id) => undoDelete(id));
+          // dismiss all toasts
+          dismiss();
+        }}>
+          {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
+        </ToastAction>
+      ) as ToastActionElement,
+      variant: 'destructive',
+    });
+  };
+
+  const undoDelete = (id: string) => {
+    const pendingDeletes = pendingDeletesRef.current;
+    const timeout = pendingDeletes.get(id);
+    if (timeout) {
+      clearTimeout(timeout);
+      pendingDeletes.delete(id);
+
+      // Re-fetch the deleted item from backend to restore it in the UI
+      // Instead of fetching single, just refetch all data to keep it simple
+      fetchOfficeInformation();
+
+      toast({
+        title: language === 'bn' ? 'পূর্বাবস্থায় ফিরেছে' : 'Restored',
+        description: language === 'bn' ? 'আইটেমটি পূর্বাবস্থায় ফেরানো হয়েছে' : 'Item restored',
       });
     }
   };
@@ -387,20 +458,19 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
     }
 
     const headers = language === 'bn'
-      ? ['মন্ত্রণালয়/বিভাগ', 'অফিসের নাম', 'পরিচিতি নম্বর', 'NID নম্বর', 'জন্ম স্থান', 'গ্রাম/ওয়ার্ড', 'উপজেলা/থানা', 'জেলা', 'স্ট্যাটাস', 'তৈরির তারিখ']
-      : ['Ministry/Division', 'Office Name', 'Identity Number', 'NID Number', 'Birth Place', 'Village/Ward', 'Upazila/Thana', 'District', 'Status', 'Created At'];
+      ? ['মন্ত্রণালয়/বিভাগ', 'অফিসের নাম', 'পরিচিতি নম্বর', 'NID নম্বর', 'জন্ম স্থান', 'গ্রাম/ওয়ার্ড', 'উপজেলা/থানা', 'জেলা', 'স্ট্যাটাস']
+      : ['Ministry/Division', 'Office Name', 'Identity Number', 'NID Number', 'Birth Place', 'Village/Ward', 'Upazila/Thana', 'District', 'Status'];
 
     const rows: Array<Record<string, string>> = data.map((d) => ({
       [headers[0]]: d.ministry,
       [headers[1]]: d.directorate,
-      [headers[2]]: d.identity_number || '',
+      [headers[2]]: d.identity_number || 'N/A',
       [headers[3]]: d.nid,
       [headers[4]]: d.birth_place,
       [headers[5]]: d.village,
       [headers[6]]: d.upazila,
       [headers[7]]: d.district,
       [headers[8]]: d.status,
-      [headers[9]]: d.created_at || '',
     }));
 
     // Try dynamic import of xlsx
@@ -504,16 +574,14 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                       </Button>
                     </DialogTrigger>
 
-                    <Button variant="outline" onClick={handleDeleteSelected} className="bg-destructive text-white hover:bg-red-950 hover:shadow-lg">
-                      {language === 'bn' ? 'নির্বাচিতটি মুছুন' : 'Delete Selected'}
+                    <Button variant="outline" onClick={handleDeleteSelected} className="bg-destructive text-white hover:bg-destructive/90 hover:shadow-lg">
+                      {language === 'bn' ? 'মুছুন' : 'Delete'}
                     </Button> 
-
-                    <Button variant="outline" onClick={() => exportTable()} className="hover:bg-black hover:text-white">
-                      {language === 'bn' ? 'ডাউনলোড' : 'Download'}
-                    </Button>
-                    
-                    <Button variant="ghost" onClick={handleDeleteAll} className="bg-destructive hover:bg-red-950 hover:shadow-lg text-white">
+                    <Button variant="ghost" onClick={handleDeleteAll} className="bg-red-900 hover:bg-red-950 hover:shadow-lg text-white">
                       {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
+                    </Button>
+                    <Button variant="outline" onClick={() => exportTable()} className="hover:bg-black hover:text-white underline">
+                      {language === 'bn' ? 'ডাউনলোড' : 'Download'}
                     </Button>
 
                   </div>
@@ -657,7 +725,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-green-800 text-white hover:bg-green-800 border-b-[2px] border-green-900 dark:border-green-700 shadow-sm">
-                        <TableHead className="font-semibold text-center text-white text-xs">
+                        <TableHead className="font-semibold text-left text-white text-xs">
                           <Checkbox
                             className="bg-white border-2 border-green-700 dark:border-green-600 hover:border-green-900 hover:dark:border-green-500"
                             checked={selectedIds.length === data.length && data.length > 0}
@@ -713,7 +781,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                                 />
                               </div>
                             </TableCell>
-                            <TableCell className="text-green-800 text-left font-bold italic py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
+                            <TableCell className="text-green-800 text-left font-bold py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
                               {item.ministry}
                             </TableCell>
                             <TableCell className="py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
@@ -728,8 +796,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                             <TableCell className="py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
                               {getStatusBadge(item.status)}
                             </TableCell>
-                            <TableCell className="text-right py-0.5 px-2 border-b-[1px] border-gray-200 dark:border-gray-700">
-                              <div className="flex justify-left gap-1">
+                            <TableCell className="text-center py-0.5 px-2 border-b-[1px] border-gray-200 dark:border-gray-700">
+                              <div className="flex justify-center gap-1">
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -799,7 +867,9 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
             </Button>
             <Button
               onClick={() => {
-                performDeleteByIds(confirmIds);
+                // schedule delete with undo window
+                scheduleDelete(confirmIds);
+                setConfirmOpen(false);
               }}
               className="bg-destructive text-white"
             >
