@@ -705,7 +705,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                             className="odd:bg-white even:bg-blue-50 hover:bg-muted/30 transition-colors text-xs"
                           >
                             <TableCell className="py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
-                              <div className="flex items-center justify-center">
+                              <div className="flex items-left justify-left">
                                 <Checkbox
                                   checked={selectedIds.includes(item.id)}
                                   onCheckedChange={(checked) => toggleSelect(item.id, checked)}
@@ -713,23 +713,23 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                                 />
                               </div>
                             </TableCell>
-                            <TableCell className="text-green-800 font-bold italic py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
+                            <TableCell className="text-green-800 text-left font-bold italic py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
                               {item.ministry}
                             </TableCell>
-                            <TableCell className="py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
+                            <TableCell className="py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
                               {item.directorate}
                             </TableCell>
-                            <TableCell className="py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
+                            <TableCell className="py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
                               {item.nid}
                             </TableCell>
-                            <TableCell className="py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
+                            <TableCell className="py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700 text-foreground dark:text-foreground">
                               {item.district}
                             </TableCell>
-                            <TableCell className="py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
+                            <TableCell className="py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
                               {getStatusBadge(item.status)}
                             </TableCell>
                             <TableCell className="text-right py-0.5 px-2 border-b-[1px] border-gray-200 dark:border-gray-700">
-                              <div className="flex justify-center gap-1">
+                              <div className="flex justify-left gap-1">
                                 <Button
                                   variant="ghost"
                                   size="icon"
