@@ -505,11 +505,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                     </DialogTrigger>
 
                     <Button variant="outline" onClick={handleDeleteSelected} className="bg-destructive text-white hover:bg-red-950 hover:shadow-lg">
-                      {language === 'bn' ? 'নির্বাচিত মুছুন' : 'Delete Selected'}
+                      {language === 'bn' ? 'নির্বাচিতটি মুছুন' : 'Delete Selected'}
                     </Button> 
 
                     <Button variant="outline" onClick={() => exportTable()} className="hover:bg-black hover:text-white">
-                      {language === 'bn' ? 'ডাউনলোড ফাইল' : 'Download File'}
+                      {language === 'bn' ? 'ডাউনলোড' : 'Download'}
                     </Button>
                     
                     <Button variant="ghost" onClick={handleDeleteAll} className="bg-destructive hover:bg-red-950 hover:shadow-lg text-white">
@@ -742,18 +742,18 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleEdit(item)}
-                                  className="h-7 w-7 text-green-600 dark:text-green-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                                  className="h-7 w-7 text-green-700 dark:text-green-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
                                 >
                                   <Edit className="h-3.5 w-3.5" />
                                 </Button>
-                                <Button
+                                {/* <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleDelete(item.id)}
                                   className="h-7 w-7 text-destructive font-bold hover:text-destructive hover:bg-destructive/10 dark:text-destructive/80"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
+                                </Button> */}
                               </div>
                             </TableCell>
                           </TableRow>

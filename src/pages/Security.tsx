@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchUserProfile } from "@/integrations/supabase/profile";
 import { validatePhotoFile, validateDocumentFile, sanitizeFileName, getExtensionFromMimeType } from "@/lib/fileValidation";
 import { Loader2, Upload, Lock, FileText, User, Menu, Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,6 +49,9 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<'image' | 'pdf' | 'other' | null>(null);
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
+  const [avatarKey, setAvatarKey] = useState<number>(0);
+  const [avatarErrored, setAvatarErrored] = useState<boolean>(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const detectFileType = (url: string | undefined | null) => {
     if (!url) return 'other' as const;
@@ -130,68 +134,109 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // reset avatar error when URL changes
+  useEffect(() => {
+    setAvatarErrored(false);
+  }, [profileData?.passport_photo_url]);
+
+  // Fetch raw profile and resolve avatar URL with priority:
+  // 1) If stored value is a full URL and looks like a Supabase public storage URL, request a signed URL from the detected bucket
+  // 2) If stored value is a full URL (non-storage), use as-is
+  // 3) If stored value is a storage path, try createSignedUrl('passport-photos') then fall back to getPublicUrl
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, passport_photo_url')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching profile for avatar:', error);
+          return;
+        }
+
+        if (!data) return;
+
+        // keep profileData in sync for other fields
+        setProfileData(prev => ({ ...(prev || {}), full_name: data.full_name, passport_photo_url: data.passport_photo_url }));
+
+        if (!data.passport_photo_url) {
+          setAvatarUrl(null);
+          return;
+        }
+
+        const rawPath = data.passport_photo_url as string;
+
+        try {
+          if (/^https?:\/\//i.test(rawPath)) {
+            const storageMarker = '/storage/v1/object/public/';
+            const markerIndex = rawPath.indexOf(storageMarker);
+
+            if (markerIndex !== -1) {
+              const after = rawPath.slice(markerIndex + storageMarker.length);
+              const [bucket, ...rest] = after.split('/');
+              const path = rest.join('/');
+
+              try {
+                const { data: signedUrlData, error: signedError } = await supabase.storage
+                  .from(bucket)
+                  .createSignedUrl(path, 3600);
+
+                if (!signedError && signedUrlData?.signedUrl) {
+                  setAvatarUrl(signedUrlData.signedUrl);
+                } else {
+                  setAvatarUrl(rawPath);
+                }
+              } catch (err) {
+                console.error('Error requesting signed URL from public storage URL:', err);
+                setAvatarUrl(rawPath);
+              }
+            } else {
+              setAvatarUrl(rawPath);
+            }
+          } else {
+            const path = (rawPath || '').replace(/^\/+/, '');
+
+            const { data: signedUrlData, error: signedError } = await supabase.storage
+              .from('passport-photos')
+              .createSignedUrl(path, 3600);
+
+            if (signedUrlData?.signedUrl) {
+              setAvatarUrl(signedUrlData.signedUrl);
+            } else {
+              const { data: publicData } = supabase.storage
+                .from('passport-photos')
+                .getPublicUrl(path);
+
+              if (publicData?.publicUrl) {
+                setAvatarUrl(publicData.publicUrl);
+              } else {
+                console.warn('Could not resolve avatar URL for path:', path);
+                setAvatarUrl(null);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Unexpected error resolving avatar URL:', err);
+          setAvatarUrl(null);
+        }
+      } catch (err) {
+        console.error('Error in fetchAvatar effect:', err);
+      }
+    };
+
+    fetchAvatar();
+  }, [user]);
+
   const fetchProfileData = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('passport_photo_url, id_proof_url, full_name')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      const resolved: ProfileData = { ...(data as ProfileData) };
-
-      // Resolve passport photo URL
-      if (data?.passport_photo_url) {
-        const raw = data.passport_photo_url;
-        if (/^https?:\/\//i.test(raw)) {
-          // public or full URL — use as-is
-          resolved.passport_photo_url = raw;
-        } else {
-          // assume storage path in 'passport-photos' bucket
-          const path = raw.replace(/^\/+/, '');
-          try {
-            const { data: signedData, error: signErr } = await supabase.storage
-              .from('passport-photos')
-              .createSignedUrl(path, 3600);
-            if (!signErr && signedData?.signedUrl) {
-              resolved.passport_photo_url = signedData.signedUrl;
-            } else {
-              const { data: publicData } = supabase.storage.from('passport-photos').getPublicUrl(path);
-              resolved.passport_photo_url = publicData?.publicUrl || raw;
-            }
-          } catch (err) {
-            resolved.passport_photo_url = raw;
-          }
-        }
-      }
-
-      // Resolve id proof URL
-      if (data?.id_proof_url) {
-        const raw = data.id_proof_url;
-        if (/^https?:\/\//i.test(raw)) {
-          resolved.id_proof_url = raw;
-        } else {
-          const path = raw.replace(/^\/+/, '');
-          try {
-            const { data: signedData, error: signErr } = await supabase.storage
-              .from('id-proofs')
-              .createSignedUrl(path, 3600);
-            if (!signErr && signedData?.signedUrl) {
-              resolved.id_proof_url = signedData.signedUrl;
-            } else {
-              const { data: publicData } = supabase.storage.from('id-proofs').getPublicUrl(path);
-              resolved.id_proof_url = publicData?.publicUrl || raw;
-            }
-          } catch (err) {
-            resolved.id_proof_url = raw;
-          }
-        }
-      }
-
+      const resolved = await fetchUserProfile(user.id);
       setProfileData(resolved);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -314,7 +359,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
     if (!validation.valid) {
       toast({
         title: language === 'bn' ? 'অবৈধ ফাইল' : 'Invalid file',
-        description: validation.error,
+        description: language === 'bn' ? 'ফাইলটি বৈধ নয় বা অনুমোদিত সীমা অতিক্রম করেছে' : validation.error,
         variant: 'destructive',
       });
       return;
@@ -362,6 +407,8 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
           title: language === 'bn' ? 'সফল' : 'Success',
           description: language === 'bn' ? 'ছবি সফলভাবে আপলোড করা হয়েছে' : 'Photo uploaded successfully',
         });
+        // bump avatarKey so AvatarImage re-renders even if URL is same or cached
+        setAvatarKey(k => k + 1);
       }
 
       // Refresh profile info (will include DB value if update succeeded)
@@ -429,6 +476,8 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
       if (updateError) {
         console.warn('Profile id_proof update failed after storage upload:', updateError);
         setProfileData(prev => ({ ...(prev || {}), id_proof_url: publicUrl }));
+        // record pending upload so user can retry or copy path
+        addPendingUpload({ id: fileName, field: 'id_proof_url', filePath: fileName, publicUrl, createdAt: Date.now() });
         toast({
           title: language === 'bn' ? "অংশিক সফলতা" : "Partial success",
           description: language === 'bn'
@@ -441,6 +490,8 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
           title: language === 'bn' ? "সফল" : "Success",
           description: language === 'bn' ? "আইডি প্রুফ সফলভাবে আপলোড করা হয়েছে" : "ID proof uploaded successfully",
         });
+        // ensure fetch later will show updated preview
+        setAvatarKey(k => k + 0);
       }
 
       fetchProfileData();
@@ -462,6 +513,66 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
       });
     } finally {
       setUploadingIdProof(false);
+    }
+  };
+
+  const handleRemoveIdProof = async () => {
+    if (!user || !profileData?.id_proof_url) return;
+
+    // Try to determine storage path from stored value. If it's a full URL (signed or public),
+    // attempt to extract the path after the bucket name. For safety, we'll try delete by guessing
+    // common storage patterns, but always update DB to null if possible.
+    setLoading(true);
+    try {
+      // If stored value looks like a storage public URL created by supabase.storage.getPublicUrl,
+      // it typically contains "/storage/v1/object/public/<bucket>/<path>" or equals the raw path.
+      const url = profileData.id_proof_url;
+
+      // Try extracting path by splitting after the bucket segment if present
+      let possiblePath: string | null = null;
+      try {
+        const u = new URL(url);
+        const parts = u.pathname.split('/').filter(Boolean);
+        const idx = parts.indexOf('object') ;
+        if (idx >= 0) {
+          // path like /storage/v1/object/public/<bucket>/<path...>
+          // we expect bucket at idx+2
+          const bucket = parts[idx + 2];
+          const pathParts = parts.slice(idx + 3);
+          possiblePath = pathParts.join('/');
+        } else {
+          // last two segments may be bucket/path; fallback: take everything after bucket name if you can guess it
+          // Not reliable - leave possiblePath null to avoid accidental deletion
+          possiblePath = null;
+        }
+      } catch (e) {
+        possiblePath = null;
+      }
+
+      // Attempt to delete if we have a path
+      if (possiblePath) {
+        // We don't know the bucket; try common bucket name 'id-proofs'
+        const { error: delErr } = await supabase.storage.from('id-proofs').remove([possiblePath]);
+        if (delErr) {
+          console.warn('Could not delete file from storage:', delErr);
+        }
+      }
+
+      // Update profile to remove reference
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({ id_proof_url: null })
+        .eq('id', user.id);
+
+      if (updateErr) throw updateErr;
+
+      toast({ title: language === 'bn' ? 'সফল' : 'Success', description: language === 'bn' ? 'আইডি প্রুফ মুছে ফেলা হয়েছে' : 'ID proof removed' });
+      fetchProfileData();
+    } catch (err: unknown) {
+      console.error('Remove id proof failed', err);
+      toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'আইডি প্রুফ মুছে ফেলা যায়নি' : 'Failed to remove ID proof', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -529,7 +640,13 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4">
                     <Avatar className="h-24 w-24">
-                      <AvatarImage src={profileData?.passport_photo_url} />
+                      {!avatarErrored && avatarUrl ? (
+                        <AvatarImage
+                          key={avatarKey}
+                          src={`${avatarUrl}${avatarUrl.includes('?') ? '&' : '?'}v=${avatarKey}`}
+                          onError={() => setAvatarErrored(true)}
+                        />
+                      ) : null}
                       <AvatarFallback className="text-2xl">
                         {profileData?.full_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2) || 'U'}
                       </AvatarFallback>
@@ -569,7 +686,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                       {language === 'bn' ? 'অপেক্ষমাণ আপলোড' : 'Pending Uploads'}
                     </CardTitle>
                     <CardDescription>
-                      {language === 'bn' ? 'ডাটাবেস আপডেট ব্যর্থ হওয়ার কারণে কিছু আপলোড মুলতুবি আছে' : 'Some uploads succeeded in storage but failed to update the database (RLS)'}
+                      {language === 'bn' ? 'আপলোড স্টোরেজে সফল হয়েছে কিন্তু ডাটাবেস আপডেট করতে ব্যর্থ হয়েছে, অনুগ্রহ করে অপেক্ষা করুন' : 'Some uploads succeeded in storage but failed to update the database. Please wait.'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -716,6 +833,13 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                               className="text-sm text-primary hover:underline font-medium"
                             >
                               {language === 'bn' ? 'প্রিভিউ দেখুন' : 'View Preview'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemoveIdProof}
+                              className="text-sm text-destructive hover:underline font-medium"
+                            >
+                              {language === 'bn' ? 'মুছুন' : 'Remove'}
                             </button>
                           </div>
                         </div>
