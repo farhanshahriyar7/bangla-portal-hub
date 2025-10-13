@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Eye, Edit, Trash2, Plus, Menu, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -72,12 +73,12 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
   });
   const [data, setData] = useState<OfficeInfoData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmIds, setConfirmIds] = useState<string[]>([]);
+  const [confirmMode, setConfirmMode] = useState<'single' | 'selected' | 'all' | null>(null);
 
   // Fetch data from database
-  useEffect(() => {
-    fetchOfficeInformation();
-  }, []);
-
   const fetchOfficeInformation = async () => {
     try {
       setLoading(true);
@@ -104,6 +105,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchOfficeInformation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,30 +167,10 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('office_information')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      await fetchOfficeInformation();
-      toast({
-        title: language === 'bn' ? "মুছে ফেলা হয়েছে" : "Deleted",
-        description: language === 'bn' ? "তথ্য মুছে ফেলা হয়েছে" : "Information has been deleted",
-        variant: "destructive",
-      });
-    } catch (error) {
-      console.error('Error deleting office information:', error);
-      toast({
-        title: language === 'bn' ? "ত্রুটি" : "Error",
-        description: language === 'bn'
-          ? "তথ্য মুছতে সমস্যা হয়েছে"
-          : "Failed to delete information",
-        variant: "destructive",
-      });
-    }
+    // Open confirmation modal for single delete
+    setConfirmIds([id]);
+    setConfirmMode('single');
+    setConfirmOpen(true);
   };
 
   const handleView = (item: OfficeInfoData) => {
@@ -288,6 +274,148 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
     });
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === data.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(data.map((d) => d.id));
+    }
+  };
+
+  const toggleSelect = (id: string, checked: boolean | "indeterminate" | undefined) => {
+    if (checked === "indeterminate" || checked === undefined) return;
+    setSelectedIds((prev) => (checked ? Array.from(new Set([...prev, id])) : prev.filter((i) => i !== id)));
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) {
+      toast({
+        title: language === 'bn' ? 'কোন আইটেম নির্বাচন করা হয়নি' : 'No items selected',
+        description: language === 'bn' ? 'কমপক্ষে একটি আইটেম নির্বাচন করুন' : 'Select at least one item',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setConfirmIds(selectedIds);
+    setConfirmMode('selected');
+    setConfirmOpen(true);
+  };
+
+  const handleDeleteAll = async () => {
+    if (data.length === 0) {
+      toast({
+        title: language === 'bn' ? 'কোনও ডেটা নেই' : 'No data',
+        description: language === 'bn' ? 'মুছার জন্য কোন তথ্য নেই' : 'There is no data to delete',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setConfirmIds(data.map((d) => d.id));
+    setConfirmMode('all');
+    setConfirmOpen(true);
+  };
+
+  const performDeleteByIds = async (ids: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('office_information')
+        .delete()
+        .in('id', ids);
+
+      if (error) throw error;
+
+      await fetchOfficeInformation();
+      setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+      setConfirmOpen(false);
+
+      toast({
+        title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
+        description:
+          language === 'bn'
+            ? (ids.length > 1 ? 'নির্বাচিত আইটেমগুলো মুছে ফেলা হয়েছে' : 'আইটেম মুছে ফেলা হয়েছে')
+            : (ids.length > 1 ? 'Selected items were deleted' : 'Item was deleted'),
+        variant: 'destructive',
+      });
+    } catch (error) {
+      console.error('Error deleting office information:', error);
+      toast({
+        title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        description: language === 'bn' ? 'মুছতে ব্যর্থ হয়েছে' : 'Failed to delete items',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Export table data to Excel (.xlsx) or fallback to CSV with UTF-8 BOM for Bangla
+  const exportTable = async () => {
+    if (data.length === 0) {
+      toast({
+        title: language === 'bn' ? 'কোন ডেটা নেই' : 'No data',
+        description: language === 'bn' ? 'রফতানি করার জন্য কোন ডেটা নেই' : 'No data to export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const headers = language === 'bn'
+      ? ['মন্ত্রণালয়/বিভাগ', 'অফিসের নাম', 'পরিচিতি নম্বর', 'NID নম্বর', 'জন্ম স্থান', 'গ্রাম/ওয়ার্ড', 'উপজেলা/থানা', 'জেলা', 'স্ট্যাটাস', 'তৈরির তারিখ']
+      : ['Ministry/Division', 'Office Name', 'Identity Number', 'NID Number', 'Birth Place', 'Village/Ward', 'Upazila/Thana', 'District', 'Status', 'Created At'];
+
+    const rows: Array<Record<string, string>> = data.map((d) => ({
+      [headers[0]]: d.ministry,
+      [headers[1]]: d.directorate,
+      [headers[2]]: d.identity_number || '',
+      [headers[3]]: d.nid,
+      [headers[4]]: d.birth_place,
+      [headers[5]]: d.village,
+      [headers[6]]: d.upazila,
+      [headers[7]]: d.district,
+      [headers[8]]: d.status,
+      [headers[9]]: d.created_at || '',
+    }));
+
+    // Try dynamic import of xlsx
+    try {
+      // @ts-expect-error - dynamic import of optional dependency
+      const XLSX = await import('xlsx');
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'OfficeInformation');
+      const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `office_information_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      // Fallback to CSV with BOM for Bangla support
+      const header = headers;
+      const csv = [header.join(','), ...rows.map(r => header.map(h => `"${String((r[h] ?? '')).replace(/"/g, '""')}"`).join(','))].join('\n');
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `office_information_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: language === 'bn' ? 'এক্সপোর্ট (CSV) সম্পন্ন' : 'Export (CSV) completed',
+        description: language === 'bn' ? 'SheetJS ইনস্টল করা না থাকায় CSV হিসেবে ডাউনলোড করা হয়েছে' : 'Downloaded as CSV because SheetJS is not available',
+      });
+    }
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen w-full bg-background flex">
@@ -342,12 +470,27 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                 </div>
 
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
-                      <Plus className="h-4 w-4 mr-2" />
-                      {language === 'bn' ? 'নতুন তথ্য' : 'New Information'}
+                  <div className="flex items-center gap-2">
+                    <DialogTrigger asChild>
+                      <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
+                        <Plus className="h-4 w-4 mr-2" />
+                        {language === 'bn' ? 'নতুন তথ্য' : 'New Information'}
+                      </Button>
+                    </DialogTrigger>
+
+                    <Button variant="outline" onClick={handleDeleteSelected} className="bg-destructive text-white hover:bg-red-950 hover:shadow-lg">
+                      {language === 'bn' ? 'নির্বাচিত মুছুন' : 'Delete Selected'}
                     </Button>
-                  </DialogTrigger>
+
+                    <Button variant="outline" onClick={() => exportTable()} className="hover:bg-black hover:text-white">
+                      {language === 'bn' ? 'ডাউনলোড ফাইল' : 'Download File'}
+                    </Button>
+
+                    <Button variant="ghost" onClick={handleDeleteAll} className="bg-destructive hover:bg-red-950 hover:shadow-lg text-white">
+                      {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
+                    </Button>
+
+                  </div>
                   <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
@@ -488,22 +631,30 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-green-800 text-white hover:bg-green-800 border-b-[2px] border-green-900 dark:border-green-700 shadow-sm">
-                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-center text-white text-xs">
+                          <Checkbox
+                            className="bg-white border-2 border-green-700 dark:border-green-600 hover:border-green-900 hover:dark:border-green-500"
+                            checked={selectedIds.length === data.length && data.length > 0}
+                            onCheckedChange={() => toggleSelectAll()}
+                            aria-label={language === 'bn' ? 'সব নির্বাচন করুন' : 'Select all'}
+                          />
+                        </TableHead>
+                        <TableHead className="font-semibold text-center text-white text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'মন্ত্রণালয়/বিভাগ' : 'Ministry/Division'}
                         </TableHead>
-                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-center text-white text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'অফিসের নাম' : 'Office Name'}
                         </TableHead>
-                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-center text-white text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'NID নম্বর' : 'NID Number'}
                         </TableHead>
-                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-center text-white text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'জেলা' : 'District'}
                         </TableHead>
-                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
+                        <TableHead className="font-semibold text-center text-white text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                           {language === 'bn' ? 'স্ট্যাটাস' : 'Status'}
                         </TableHead>
-                        <TableHead className="font-semibold text-center text-white py-0.5 px-2 text-xs">
+                        <TableHead className="font-semibold text-center text-white text-xs">
                           {language === 'bn' ? 'কার্যক্রম' : 'Actions'}
                         </TableHead>
                       </TableRow>
@@ -511,13 +662,13 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-2 text-muted-foreground text-xs">
+                          <TableCell colSpan={7} className="text-center py-2 text-muted-foreground text-xs">
                             {language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
                           </TableCell>
                         </TableRow>
                       ) : data.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-2 text-muted-foreground text-xs">
+                          <TableCell colSpan={7} className="text-center py-2 text-muted-foreground text-xs">
                             {language === 'bn' ? 'কোন তথ্য পাওয়া যায়নি' : 'No data found'}
                           </TableCell>
                         </TableRow>
@@ -527,6 +678,15 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                             key={item.id}
                             className="odd:bg-white even:bg-blue-50 hover:bg-muted/30 transition-colors text-xs"
                           >
+                            <TableCell className="py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
+                              <div className="flex items-center justify-center">
+                                <Checkbox
+                                  checked={selectedIds.includes(item.id)}
+                                  onCheckedChange={(checked) => toggleSelect(item.id, checked)}
+                                  aria-label={language === 'bn' ? 'অংশ নির্বাচন করুন' : 'Select row'}
+                                />
+                              </div>
+                            </TableCell>
                             <TableCell className="text-green-800 font-bold italic py-0.5 px-2 text-xs border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">
                               {item.ministry}
                             </TableCell>
@@ -592,6 +752,36 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
           </footer>
         </SidebarInset>
       </div>
+
+      {/* Confirmation Dialog for deletes */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'bn'
+                ? 'আপনি এই আইটেম(গুলি) স্থায়ীভাবে মুছে ফেলতে যাচ্ছেন। এটি পূর্বাবস্থায় ফিরবে না।'
+                : 'You are about to permanently delete the selected item(s). This action cannot be undone.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              {language === 'bn' ? 'বাতিল' : 'Cancel'}
+            </Button>
+            <Button
+              onClick={() => {
+                performDeleteByIds(confirmIds);
+              }}
+              className="bg-destructive text-white"
+            >
+              {language === 'bn' ? 'মুছুন' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
