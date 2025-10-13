@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ChevronRight, ChevronLeft, Upload } from 'lucide-react';
 import { z } from 'zod';
+import { validatePhotoFile, validateDocumentFile, sanitizeFileName, getExtensionFromMimeType } from '@/lib/fileValidation';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import Calendar22 from '@/components/ui/calendar22';
@@ -147,15 +148,35 @@ export default function Register() {
   };
 
   const handleFileUpload = async (file: File, bucket: string, userId: string): Promise<string | null> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Math.random()}.${fileExt}`;
+    // Validate file based on bucket type
+    const validation = bucket === 'passport-photos' 
+      ? await validatePhotoFile(file)
+      : await validateDocumentFile(file);
+    
+    if (!validation.valid) {
+      toast({
+        title: "Invalid file",
+        description: validation.error,
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    // Use sanitized file name with proper extension based on MIME type
+    const safeBaseName = sanitizeFileName(file.name.split('.')[0] || 'file');
+    const extension = getExtensionFromMimeType(file.type);
+    const fileName = `${userId}/${safeBaseName}-${Date.now()}.${extension}`;
 
     const { error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(fileName, file);
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
+      toast({
+        title: "Upload error",
+        description: "Failed to upload file. Please try again.",
+        variant: "destructive",
+      });
       return null;
     }
 

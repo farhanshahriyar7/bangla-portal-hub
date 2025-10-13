@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { validatePhotoFile, validateDocumentFile, sanitizeFileName, getExtensionFromMimeType } from "@/lib/fileValidation";
 import { Loader2, Upload, Lock, FileText, User, Menu, Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -307,12 +308,13 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
     if (!event.target.files || !event.target.files[0] || !user) return;
 
     const file = event.target.files[0];
-    // limit ~2MB for profile photos
-    const maxSize = 2 * 1024 * 1024;
-    if (file.size > maxSize) {
+    
+    // Validate file
+    const validation = await validatePhotoFile(file);
+    if (!validation.valid) {
       toast({
-        title: language === 'bn' ? 'ফাইল বড়' : 'File too large',
-        description: language === 'bn' ? 'প্রোফাইল ছবির সর্বোচ্চ সাইজ ২MB' : 'Profile photo max size is 2MB',
+        title: language === 'bn' ? 'অবৈধ ফাইল' : 'Invalid file',
+        description: validation.error,
         variant: 'destructive',
       });
       return;
@@ -321,19 +323,20 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
     setUploadingPhoto(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`; // store path for potential server-side or admin actions
+      // Use sanitized file name with proper extension based on MIME type
+      const safeBaseName = sanitizeFileName(file.name.split('.')[0] || 'photo');
+      const extension = getExtensionFromMimeType(file.type);
+      const fileName = `${user.id}/${safeBaseName}-${Date.now()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from('passport-photos')
-        .upload(filePath, file, { upsert: true });
+        .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('passport-photos')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
       const { error: updateError } = await supabase
         .from('profiles')
@@ -345,7 +348,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
         console.warn('Profile update failed after storage upload:', updateError);
         setProfileData(prev => ({ ...(prev || {}), passport_photo_url: publicUrl }));
         // record pending upload so user can retry or copy path
-        addPendingUpload({ id: filePath, field: 'passport_photo_url', filePath, publicUrl, createdAt: Date.now() });
+        addPendingUpload({ id: fileName, field: 'passport_photo_url', filePath: fileName, publicUrl, createdAt: Date.now() });
 
         toast({
           title: language === 'bn' ? 'অংশিক সফলতা' : 'Partial success',
@@ -388,22 +391,35 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
     if (!event.target.files || !event.target.files[0] || !user) return;
 
     const file = event.target.files[0];
+    
+    // Validate file
+    const validation = await validateDocumentFile(file);
+    if (!validation.valid) {
+      toast({
+        title: language === 'bn' ? 'অবৈধ ফাইল' : 'Invalid file',
+        description: validation.error,
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setUploadingIdProof(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      // Use sanitized file name with proper extension based on MIME type
+      const safeBaseName = sanitizeFileName(file.name.split('.')[0] || 'id-proof');
+      const extension = getExtensionFromMimeType(file.type);
+      const fileName = `${user.id}/${safeBaseName}-${Date.now()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from('id-proofs')
-        .upload(filePath, file, { upsert: true });
+        .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('id-proofs')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
       const { error: updateError } = await supabase
         .from('profiles')
