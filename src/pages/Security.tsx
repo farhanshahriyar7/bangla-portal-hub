@@ -653,35 +653,69 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {profileData?.id_proof_url && (
-                    <div className="p-4 bg-muted rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {language === 'bn' ? 'বর্তমান ডকুমেন্ট' : 'Current Document'}
+                    <div className="p-4 bg-muted rounded-lg space-y-3">
+                      <p className="text-sm font-medium text-foreground">
+                        {language === 'bn' ? 'আপলোডকৃত ডকুমেন্ট' : 'Uploaded Document'}
                       </p>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-4">
                         {detectFileType(profileData.id_proof_url) === 'image' ? (
-                          <img src={profileData.id_proof_url} alt="id-proof" className="h-16 w-16 object-cover rounded" />
+                          <div className="relative">
+                            <img 
+                              src={profileData.id_proof_url} 
+                              alt="id-proof" 
+                              className="h-20 w-20 object-cover rounded border-2 border-border" 
+                            />
+                            <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                              {language === 'bn' ? 'ছবি' : 'Image'}
+                            </div>
+                          </div>
                         ) : detectFileType(profileData.id_proof_url) === 'pdf' ? (
-                          <div className="h-16 w-16 bg-slate-50 rounded flex items-center justify-center text-sm">PDF</div>
+                          <div className="relative">
+                            <div className="h-20 w-20 bg-destructive/10 border-2 border-destructive/20 rounded flex flex-col items-center justify-center">
+                              <FileText className="h-8 w-8 text-destructive" />
+                              <span className="text-xs font-semibold text-destructive mt-1">PDF</span>
+                            </div>
+                          </div>
                         ) : (
-                          <div className="h-16 w-16 bg-slate-50 rounded flex items-center justify-center text-sm">File</div>
+                          <div className="relative">
+                            <div className="h-20 w-20 bg-accent border-2 border-border rounded flex flex-col items-center justify-center">
+                              <FileText className="h-8 w-8 text-muted-foreground" />
+                              <span className="text-xs font-semibold text-muted-foreground mt-1">DOC</span>
+                            </div>
+                          </div>
                         )}
 
-                        <div className="flex-1">
+                        <div className="flex-1 space-y-2">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground break-all">
+                              {decodeURIComponent(profileData.id_proof_url.split('/').pop()?.split('?')[0] || 'document')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {language === 'bn' ? 'ধরণ: ' : 'Type: '}
+                              <span className="font-medium">
+                                {detectFileType(profileData.id_proof_url) === 'image' 
+                                  ? (language === 'bn' ? 'ছবি ফাইল' : 'Image File')
+                                  : detectFileType(profileData.id_proof_url) === 'pdf'
+                                  ? 'PDF Document'
+                                  : (language === 'bn' ? 'ডকুমেন্ট ফাইল' : 'Document File')}
+                              </span>
+                            </p>
+                          </div>
                           <div className="flex items-center gap-3">
                             <a
                               href={profileData.id_proof_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary hover:underline text-sm"
+                              className="text-sm text-primary hover:underline font-medium"
                             >
-                              {language === 'bn' ? 'ডকুমেন্ট দেখুন' : 'View Document'}
+                              {language === 'bn' ? 'ডাউনলোড করুন' : 'Download'}
                             </a>
                             <button
                               type="button"
                               onClick={() => openPreview(profileData.id_proof_url)}
-                              className="text-sm text-muted-foreground underline"
+                              className="text-sm text-primary hover:underline font-medium"
                             >
-                              {language === 'bn' ? 'প্রিভিউ' : 'Preview'}
+                              {language === 'bn' ? 'প্রিভিউ দেখুন' : 'View Preview'}
                             </button>
                           </div>
                         </div>
