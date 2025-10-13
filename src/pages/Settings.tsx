@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { CopyRights } from "@/components/CopyRights";
 
 interface SettingsProps {
@@ -49,7 +49,9 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
     joining_date: "",
   });
 
-  const handleNavigation = (section: string) => {
+  const { signOut } = useAuth();
+
+  const handleNavigation = async (section: string) => {
     if (section === 'dashboard') {
       navigate('/');
       return;
@@ -62,6 +64,31 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
 
     if (section === 'office-information') {
       navigate('/office-information');
+      return;
+    }
+
+    if (section === 'logout') {
+      try {
+        await signOut();
+
+        toast({
+          title: language === 'bn' ? 'লগ আউট' : 'Logout',
+          description:
+            language === 'bn'
+              ? 'আপনি সফলভাবে লগ আউট হয়েছেন।'
+              : 'You have been successfully logged out.',
+        });
+
+        navigate('/login');
+      } catch (error) {
+        console.error('Logout error:', error);
+        toast({
+          title: language === 'bn' ? 'ত্রুটি' : 'Error',
+          description: language === 'bn' ? 'লগ আউট করতে ব্যর্থ হয়েছে' : 'Failed to logout',
+          variant: 'destructive',
+        });
+      }
+
       return;
     }
 

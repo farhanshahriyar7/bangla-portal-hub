@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -250,7 +251,9 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
     return <Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>;
   };
 
-  const handleNavigation = (section: string) => {
+  const { signOut } = useAuth();
+
+  const handleNavigation = async (section: string) => {
     if (section === 'dashboard') {
       navigate('/');
       return;
@@ -263,6 +266,30 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
 
     if (section === 'settings') {
       navigate('/settings');
+      return;
+    }
+
+    if (section === 'logout') {
+      try {
+        await signOut();
+
+        toast({
+          title: language === 'bn' ? 'লগ আউট' : 'Logout',
+          description: language === 'bn'
+            ? 'আপনি সফলভাবে লগ আউট হয়েছেন।'
+            : 'You have been successfully logged out.',
+        });
+
+        navigate('/login');
+      } catch (error) {
+        console.error('Logout error:', error);
+        toast({
+          title: language === 'bn' ? 'ত্রুটি' : 'Error',
+          description: language === 'bn' ? 'লগ আউট করতে ব্যর্থ হয়েছে' : 'Failed to logout',
+          variant: 'destructive',
+        });
+      }
+
       return;
     }
 
@@ -348,12 +375,12 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
     }
   };
 
-  // Export table data to Excel (.xlsx) or fallback to CSV with UTF-8 BOM for Bangla
+  // Export table data to Excel (.xlsx) 
   const exportTable = async () => {
     if (data.length === 0) {
       toast({
         title: language === 'bn' ? 'কোন ডেটা নেই' : 'No data',
-        description: language === 'bn' ? 'রফতানি করার জন্য কোন ডেটা নেই' : 'No data to export',
+        description: language === 'bn' ? 'Export করার জন্য কোন ডেটা নেই' : 'No data to export',
         variant: 'destructive',
       });
       return;
@@ -378,7 +405,6 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
 
     // Try dynamic import of xlsx
     try {
-      // @ts-expect-error - dynamic import of optional dependency
       const XLSX = await import('xlsx');
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
@@ -480,12 +506,12 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
 
                     <Button variant="outline" onClick={handleDeleteSelected} className="bg-destructive text-white hover:bg-red-950 hover:shadow-lg">
                       {language === 'bn' ? 'নির্বাচিত মুছুন' : 'Delete Selected'}
-                    </Button>
+                    </Button> 
 
                     <Button variant="outline" onClick={() => exportTable()} className="hover:bg-black hover:text-white">
                       {language === 'bn' ? 'ডাউনলোড ফাইল' : 'Download File'}
                     </Button>
-
+                    
                     <Button variant="ghost" onClick={handleDeleteAll} className="bg-destructive hover:bg-red-950 hover:shadow-lg text-white">
                       {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
                     </Button>
