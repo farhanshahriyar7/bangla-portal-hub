@@ -52,6 +52,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
   const [avatarKey, setAvatarKey] = useState<number>(0);
   const [avatarErrored, setAvatarErrored] = useState<boolean>(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [resolvedIdProofUrl, setResolvedIdProofUrl] = useState<string | null>(null);
 
   const detectFileType = (url: string | undefined | null) => {
     if (!url) return 'other' as const;
@@ -231,6 +232,79 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
 
     fetchAvatar();
   }, [user]);
+
+  // Resolve id_proof_url to a usable URL (signed or public) for preview/download
+  useEffect(() => {
+    const resolveIdProof = async () => {
+      if (!user) return;
+      const raw = profileData?.id_proof_url;
+      if (!raw) {
+        setResolvedIdProofUrl(null);
+        return;
+      }
+
+      // If it's already an absolute URL, try to request a signed url if it's a storage public path
+      try {
+        if (/^https?:\/\//i.test(raw)) {
+          // Try to detect storage public url pattern and request signed URL to avoid CORS/signed expiry issues
+          const storageMarker = '/storage/v1/object/public/';
+          const markerIndex = raw.indexOf(storageMarker);
+          if (markerIndex !== -1) {
+            const after = raw.slice(markerIndex + storageMarker.length);
+            const [bucket, ...rest] = after.split('/');
+            const path = rest.join('/');
+            try {
+              const { data: signedData, error: signedErr } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+              if (!signedErr && signedData?.signedUrl) {
+                setResolvedIdProofUrl(signedData.signedUrl);
+                return;
+              }
+            } catch (e) {
+              // fall back to raw
+            }
+          }
+
+          // If not a storage url or signed url failed, use raw
+          setResolvedIdProofUrl(raw);
+          return;
+        }
+
+        // If it's not an absolute URL, treat it as a storage path in common buckets
+        const path = (raw || '').replace(/^\/+/, '');
+        // Try common buckets that this app uses
+        const buckets = ['id-proofs', 'passport-photos'];
+        for (const b of buckets) {
+          try {
+            const { data: signedData, error: signedErr } = await supabase.storage.from(b).createSignedUrl(path, 3600);
+            if (!signedErr && signedData?.signedUrl) {
+              setResolvedIdProofUrl(signedData.signedUrl);
+              return;
+            }
+          } catch (e) {
+            // ignore and try next
+          }
+          try {
+            const { data: publicData } = supabase.storage.from(b).getPublicUrl(path);
+            if (publicData?.publicUrl) {
+              setResolvedIdProofUrl(publicData.publicUrl);
+              return;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        // fallback to raw value
+        setResolvedIdProofUrl(raw);
+      } catch (err) {
+        console.error('Error resolving id proof url', err);
+        setResolvedIdProofUrl(raw);
+      }
+    };
+
+    resolveIdProof();
+    // Only track profileData.id_proof_url and user for this effect
+  }, [profileData?.id_proof_url, user]);
 
   const fetchProfileData = async () => {
     if (!user) return;
@@ -775,10 +849,10 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                         {language === 'bn' ? 'আপলোডকৃত ডকুমেন্ট' : 'Uploaded Document'}
                       </p>
                       <div className="flex items-start gap-4">
-                        {detectFileType(profileData.id_proof_url) === 'image' ? (
+                        {detectFileType(resolvedIdProofUrl || profileData.id_proof_url) === 'image' ? (
                           <div className="relative">
                             <img 
-                              src={profileData.id_proof_url} 
+                              src={resolvedIdProofUrl || profileData.id_proof_url} 
                               alt="id-proof" 
                               className="h-20 w-20 object-cover rounded border-2 border-border" 
                             />
@@ -786,7 +860,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                               {language === 'bn' ? 'ছবি' : 'Image'}
                             </div>
                           </div>
-                        ) : detectFileType(profileData.id_proof_url) === 'pdf' ? (
+                        ) : detectFileType(resolvedIdProofUrl || profileData.id_proof_url) === 'pdf' ? (
                           <div className="relative">
                             <div className="h-20 w-20 bg-destructive/10 border-2 border-destructive/20 rounded flex flex-col items-center justify-center">
                               <FileText className="h-8 w-8 text-destructive" />
@@ -820,7 +894,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                           </div>
                           <div className="flex items-center gap-3">
                             <a
-                              href={profileData.id_proof_url}
+                              href={resolvedIdProofUrl || profileData.id_proof_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-sm text-primary hover:underline font-medium"
@@ -829,7 +903,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                             </a>
                             <button
                               type="button"
-                              onClick={() => openPreview(profileData.id_proof_url)}
+                              onClick={() => openPreview(resolvedIdProofUrl || profileData.id_proof_url)}
                               className="text-sm text-primary hover:underline font-medium"
                             >
                               {language === 'bn' ? 'প্রিভিউ দেখুন' : 'View Preview'}
