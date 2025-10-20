@@ -36,8 +36,8 @@ export default defineConfig(({ mode }) => ({
   },
   envPrefix: 'VITE_',
   define: {
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'https://fijoyjfxwnkuhtanmqtq.supabase.co'),
-    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpam95amZ4d25rdWh0YW5tcXRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwNzcwMDcsImV4cCI6MjA3NTY1MzAwN30.9UlTW-W7iNCC91LX-TKjhAlpywzQRhvXn244bkpw5oU'),
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'https://jjihuhievsimvkuhmdjp.supabase.co'),
+    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqaWh1aGlldnNpbXZrdWhtZGpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NTE4MDksImV4cCI6MjA3NjUyNzgwOX0.R5en6MjZXOlMCIkHIa2hSAjIKE6QXR_PvEIT-Y3PyqE'),
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
