@@ -65,6 +65,55 @@ export type Database = {
         }
         Relationships: []
       }
+      general_information: {
+        Row: {
+          id: string
+          user_id: string
+          father_name: string | null
+          mother_name: string | null
+          office_address: string | null
+          blood_group: string | null
+          current_position_joining_date: string | null
+          correction_date: string | null
+          special_case: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          father_name?: string | null
+          mother_name?: string | null
+          office_address?: string | null
+          blood_group?: string | null
+          current_position_joining_date?: string | null
+          correction_date?: string | null
+          special_case?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          father_name?: string | null
+          mother_name?: string | null
+          office_address?: string | null
+          blood_group?: string | null
+          current_position_joining_date?: string | null
+          correction_date?: string | null
+          special_case?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_general_information_user"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           address_line1: string | null

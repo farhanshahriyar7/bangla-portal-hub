@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import PendingApproval from "./pages/PendingApproval";
 import NotFound from "./pages/NotFound";
+import GeneralInformation from "./pages/GeneralInformation";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,8 @@ const App = () => {
               <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/office-information" element={<ProtectedRoute><OfficeInformation language={language} /></ProtectedRoute>} />
+              <Route path="/general-information" element={<ProtectedRoute><GeneralInformation language={language} /></ProtectedRoute>} />
+              {/* <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /> */}
               <Route path="/settings" element={<ProtectedRoute><Settings language={language} /></ProtectedRoute>} />
               <Route path="/security" element={<ProtectedRoute><Security language={language} /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

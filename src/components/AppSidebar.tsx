@@ -29,6 +29,7 @@ export function AppSidebar({
   const [mainMenuItems, setMainMenuItems] = useState<Array<{ title: string; url: string; icon: IconType; section: string }>>([
     { title: language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard', url: '/', icon: Home as IconType, section: 'dashboard' },
     { title: language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information', url: '/office-information', icon: Building2 as IconType, section: 'office-information' },
+    { title: language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information', url: '/general-information', icon: User as IconType, section: 'general-information' },
   ]);
 
   const [toolsMenuItems, setToolsMenuItems] = useState<Array<{ title: string; url: string; icon: IconType; section: string }>>([
@@ -46,6 +47,7 @@ export function AppSidebar({
   const iconMap: Record<string, IconType> = {
     dashboard: Home,
     'office-information': Building2,
+    'general-information': User,
     upload: Upload,
     download: Download,
     notifications: Bell,
@@ -345,15 +347,15 @@ export function AppSidebar({
           {language === 'bn' ? 'লগ আউট' : 'Logout'}
         </Button>
       </div> : <div className="space-y-2">
-            <Button variant="outline" size="sm" className="w-full p-2" onClick={() => onNavigate('profile')}>
-              <Avatar className="h-6 w-6">
-                {avatarUrl ? <AvatarImage src={avatarUrl} /> : (
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {employeeData.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-            </Button>
+        <Button variant="outline" size="sm" className="w-full p-2" onClick={() => onNavigate('profile')}>
+          <Avatar className="h-6 w-6">
+            {avatarUrl ? <AvatarImage src={avatarUrl} /> : (
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                {employeeData.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+              </AvatarFallback>
+            )}
+          </Avatar>
+        </Button>
         <Button variant="outline" size="sm" className="w-full p-2" onClick={() => onNavigate('logout')}>
           <LogOut className="h-4 w-4" />
         </Button>

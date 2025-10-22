@@ -196,6 +196,12 @@ const Index = () => {
       return;
     }
 
+    // General Information page
+    if (section === "general-information") {
+      navigate("/general-information");
+      return;
+    }
+
     if (section === "security") {
       navigate("/security");
       return;
