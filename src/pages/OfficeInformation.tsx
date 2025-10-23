@@ -263,6 +263,12 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       return;
     }
 
+    // General Information page
+    if (section === "general-information") {
+      navigate("/general-information");
+      return;
+    }
+
     if (section === "security") {
       navigate("/security");
       return;
@@ -576,7 +582,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
 
                     <Button variant="outline" onClick={handleDeleteSelected} className="bg-destructive text-white hover:bg-destructive/90 hover:shadow-lg">
                       {language === 'bn' ? 'মুছুন' : 'Delete'}
-                    </Button> 
+                    </Button>
                     <Button variant="ghost" onClick={handleDeleteAll} className="bg-red-900 hover:bg-red-950 hover:shadow-lg text-white">
                       {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
                     </Button>

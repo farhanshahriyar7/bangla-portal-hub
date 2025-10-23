@@ -41,7 +41,14 @@ interface GeneralInfoRow {
   office_address?: string | null;
   blood_group?: string | null;
   current_position_joining_date?: string | null;
-  correction_date?: string | null;
+  workplace_address?: string | null;
+  workplace_phone?: string | null;
+  current_address?: string | null;
+  confirmation_order_number?: string | null;
+  confirmation_order_date?: string | null;
+  mobile_phone?: string | null;
+  // special illness information (replaces correction_date)
+  special_illness_info?: string | null;
   special_case?: boolean | null;
 }
 
@@ -139,12 +146,19 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   ];
 
   // Missing general fields to collect
+  // Reordered and extended per user request
   const missingGeneralFields: Array<{ key: keyof GeneralInfoRow; labelBn: string; labelEn: string; type?: string }> = [
     { key: 'father_name', labelBn: 'পিতার নাম', labelEn: "Father's Name" },
     { key: 'mother_name', labelBn: 'মাতার নাম', labelEn: "Mother's Name" },
     { key: 'office_address', labelBn: 'অফিসের ঠিকানা', labelEn: 'Office Address' },
     { key: 'blood_group', labelBn: 'রক্তের গ্রুপ', labelEn: 'Blood Group' },
     { key: 'current_position_joining_date', labelBn: 'বর্তমান পদে যোগদানের তারিখ', labelEn: 'Current Position Joining Date', type: 'date' },
+    { key: 'workplace_address', labelBn: 'কর্মস্থলের ঠিকানা', labelEn: 'Workplace Address' },
+    { key: 'workplace_phone', labelBn: 'কর্মস্থলের ফোন নম্বর', labelEn: 'Workplace Phone' },
+    { key: 'current_address', labelBn: 'বর্তমান ঠিকানা', labelEn: 'Current Address' },
+    { key: 'confirmation_order_number', labelBn: 'চাকরি স্থায়ীকরণের সরকারি আদেশ নং', labelEn: 'Confirmation Order No.' },
+    { key: 'confirmation_order_date', labelBn: 'চাকরি স্থায়ীকরণের সরকারি আদেশ তারিখ', labelEn: 'Confirmation Order Date', type: 'date' },
+    { key: 'mobile_phone', labelBn: 'মোবাইল ফোন', labelEn: 'Mobile Phone' },
   ];
 
   const handleProfileDraftChange = (key: keyof ProfileRow, value: string | null | undefined) => {
@@ -170,6 +184,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
   // Confirmation dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   // Centralized save routine: optionally update profiles as well
   const performSave = async ({ updateProfile }: { updateProfile: boolean }) => {
@@ -223,6 +238,8 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
       await fetchData();
       setEditProfileFields(false);
+      // close the form modal after successful save
+      setIsFormOpen(false);
     } catch (error) {
       console.error('Save error:', error);
       toast({
@@ -247,6 +264,12 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
       navigate('/');
       return;
     }
+
+    if (section === 'office-information') {
+      navigate('/office-information');
+      return;
+    }
+
     if (section === 'security') {
       navigate('/security');
       return;
@@ -304,102 +327,105 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                   <h1 className="text-3xl font-bold text-foreground">{language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information'}</h1>
                   <p className="text-muted-foreground mt-1">{language === 'bn' ? 'অনুগ্রহ করে আপনার তথ্য যাচাই ও সম্পূর্ণ করুন' : 'Please verify and complete your information'}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant={editProfileFields ? 'default' : 'outline'} onClick={() => setEditProfileFields((s) => !s)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    {language === 'bn' ? (editProfileFields ? 'প্রোফাইল সম্পাদনা চলছে' : 'প্রোফাইল সম্পাদনা') : (editProfileFields ? 'Editing Profile' : 'Edit Profile')}
-                  </Button>
-                </div>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleSave} className="space-y-6 bg-card p-6 rounded-lg border border-border">
-                <section>
-                  <h2 className="font-semibold mb-3">{language === 'bn' ? 'স্বয়ংক্রিয়ভাবে লোডিত প্রোফাইল' : 'Auto-filled profile'}</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {autoFields.map((f) => {
-                      const raw = (profileDraft as Partial<ProfileRow>)[f.key];
-                      const value = raw ?? '';
-                      const inputType = f.type === 'date' ? 'date' : 'text';
-                      return (
-                        <div className="space-y-2" key={String(f.key)}>
-                          <Label htmlFor={`auto-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
-                          <Input
-                            id={`auto-${String(f.key)}`}
-                            type={inputType}
-                            value={String(value)}
-                            onChange={(e) => handleProfileDraftChange(f.key, e.target.value)}
-                            readOnly={!editProfileFields}
-                          />
+              {/* Form as modal (matches sample) */}
+              <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <div className="flex items-center gap-2 justify-end">
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
+                      + {language === 'bn' ? 'নতুন তথ্য' : 'New Information'}
+                    </Button>
+                  </DialogTrigger>
+                </div>
+
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{language === 'bn' ? 'নতুন সাধারণ তথ্য যোগ করুন' : 'Add General Information'}</DialogTitle>
+                    <DialogDescription>{language === 'bn' ? 'নিচের ফর্মটি পূরণ করুন। সকল তথ্য সঠিকভাবে প্রদান করুন।' : 'Fill the form below. Provide all information accurately.'}</DialogDescription>
+                  </DialogHeader>
+
+
+                  <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
+                    <section>
+                      <div className='flex items-center justify-between mb-4'>
+                        <h3 className="font-semibold mb-3">{language === 'bn' ? 'স্বয়ংক্রিয়ভাবে লোডিত প্রোফাইল' : 'Auto-filled profile'}</h3>
+                        <div className="flex items-center gap-2">
+                          {/* <Button variant={editProfileFields ? 'default' : 'outline'} onClick={() => setEditProfileFields((s) => !s)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            {language === 'bn' ? (editProfileFields ? 'প্রোফাইল সম্পাদনা চলছে' : 'প্রোফাইল সম্পাদনা') : (editProfileFields ? 'Editing Profile' : 'Edit Profile')}
+                          </Button> */}
                         </div>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                <section>
-                  <h2 className="font-semibold mb-3">{language === 'bn' ? 'অতিরিক্ত সাধারণ তথ্য' : 'Additional General Information'}</h2>
-
-                  {/* Missing fields displayed first (only those empty) */}
-                  {missingFieldsList.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm text-muted-foreground">{language === 'bn' ? 'অনুগ্রহ করে নিচের অনুপস্থিত ক্ষেত্রগুলো পূরণ করুন' : 'Please fill the missing fields below'}</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                        {missingFieldsList.map((f) => (
-                          <div className="space-y-2" key={String(f.key)}>
-                            <Label htmlFor={`gen-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
-                            <Input
-                              id={`gen-${String(f.key)}`}
-                              type={f.type === 'date' ? 'date' : 'text'}
-                              value={String((general as Partial<GeneralInfoRow>)[f.key] ?? '')}
-                              onChange={(e) => handleGeneralChange(f.key, e.target.value)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Show saved / editable general fields (non-empty) */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {missingGeneralFields.map((f) => {
-                      const val = (general as Partial<GeneralInfoRow>)[f.key];
-                      return (
-                        <div className="space-y-2" key={String(f.key)}>
-                          <Label htmlFor={`gen-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
-                          <Input
-                            id={`gen-${String(f.key)}`}
-                            type={f.type === 'date' ? 'date' : 'text'}
-                            value={String(val ?? '')}
-                            onChange={(e) => handleGeneralChange(f.key, e.target.value)}
-                            placeholder={language === 'bn' ? 'অনুগ্রহ করে লিখুন' : 'Please enter'}
-                          />
-                        </div>
-                      );
-                    })}
-
-                    {/* Special case checkbox + conditional correction_date */}
-                    <div className="col-span-1 md:col-span-2 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Checkbox checked={specialCase} onCheckedChange={(v) => setSpecialCase(Boolean(v))} id="special-case" />
-                        <Label htmlFor="special-case">{language === 'bn' ? 'বিশেষ ক্ষেত্রে' : 'Special Case'}</Label>
                       </div>
 
-                      {specialCase && (
-                        <div className="mt-2">
-                          <Label htmlFor="correction_date">{language === 'bn' ? 'রেকর্ড সংশোধনের তারিখ' : 'Correction Date'}</Label>
-                          <Input id="correction_date" type="date" value={String((general as Partial<GeneralInfoRow>).correction_date ?? '')} onChange={(e) => handleGeneralChange('correction_date', e.target.value)} />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {autoFields.map((f) => {
+                          const raw = (profileDraft as Partial<ProfileRow>)[f.key];
+                          const value = raw ?? '';
+                          const inputType = f.type === 'date' ? 'date' : 'text';
+                          return (
+                            <div className="space-y-2" key={String(f.key)}>
+                              <Label htmlFor={`auto-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
+                              <Input
+                                id={`auto-${String(f.key)}`}
+                                type={inputType}
+                                value={String(value)}
+                                onChange={(e) => handleProfileDraftChange(f.key, e.target.value)}
+                                readOnly={!editProfileFields}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    <section>
+                      <h3 className="font-semibold mb-3">{language === 'bn' ? 'অতিরিক্ত সাধারণ তথ্য' : 'Additional General Information'}</h3>
+                      {missingFieldsList.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-sm text-muted-foreground">{language === 'bn' ? 'অনুগ্রহ করে নিচের অনুপস্থিত ক্ষেত্রগুলো পূরণ করুন' : 'Please fill the missing fields below'}</p>
                         </div>
                       )}
-                    </div>
-                  </div>
-                </section>
 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => fetchData()}>{language === 'bn' ? 'রিফ্রেশ' : 'Refresh'}</Button>
-                  <Button type="submit" className="bg-primary text-primary-foreground">{language === 'bn' ? 'সংরক্ষণ করুন' : 'Save'}</Button>
-                </div>
-              </form>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {missingGeneralFields.map((f) => {
+                          const val = (general as Partial<GeneralInfoRow>)[f.key];
+                          return (
+                            <div className="space-y-2" key={String(f.key)}>
+                              <Label htmlFor={`gen-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
+                              <Input
+                                id={`gen-${String(f.key)}`}
+                                type={f.type === 'date' ? 'date' : 'text'}
+                                value={String(val ?? '')}
+                                onChange={(e) => handleGeneralChange(f.key, e.target.value)}
+                                placeholder={language === 'bn' ? 'অনুগ্রহ করে লিখুন' : 'Please enter'}
+                              />
+                            </div>
+                          );
+                        })}
+                        <div className="col-span-1 md:col-span-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox checked={specialCase} onCheckedChange={(v) => setSpecialCase(Boolean(v))} id="special-case" />
+                            <Label htmlFor="special-case">{language === 'bn' ? 'বিশেষ ক্ষেত্রে' : 'Special Case'}</Label>
+                          </div>
+
+                          {specialCase && (
+                            <div className="mt-2">
+                              <Label htmlFor="special_illness_info">{language === 'bn' ? 'বিশেষ কোন রোগে ভুগিলে তার তথ্য' : 'Special illness information'}</Label>
+                              <Input id="special_illness_info" type="text" value={String((general as Partial<GeneralInfoRow>).special_illness_info ?? '')} onChange={(e) => handleGeneralChange('special_illness_info', e.target.value)} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </section>
+
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => { setIsFormOpen(false); fetchData(); }}>{language === 'bn' ? 'বাতিল' : 'Cancel'}</Button>
+                      <Button type="submit" className="bg-primary text-primary-foreground">{language === 'bn' ? 'সংরক্ষণ করুন' : 'Save'}</Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </main>
 
@@ -425,7 +451,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
               setConfirmOpen(false);
               performSave({ updateProfile: false });
             }}>{language === 'bn' ? 'বাতিল' : 'Cancel'}</Button>
-            <Button className="bg-destructive text-white" onClick={() => performSave({ updateProfile: true })}>{language === 'bn' ? 'হ্যাঁ, আপডেট করুন' : 'Yes, update'}</Button>
+            <Button className="bg-destructive hover:bg-red-950 text-white" onClick={() => performSave({ updateProfile: true })}>{language === 'bn' ? 'হ্যাঁ, আপডেট করুন' : 'Yes, update'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
