@@ -12,7 +12,9 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CopyRights } from '@/components/CopyRights';
-import { Menu, Bell, Edit } from 'lucide-react';
+import { Menu, Bell, Edit, Download, Eye } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Database } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
 
@@ -68,6 +70,13 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   const [general, setGeneral] = useState<Partial<GeneralInfoRow>>({});
   const [specialCase, setSpecialCase] = useState(false);
 
+  // List view state
+  const [generalInfoList, setGeneralInfoList] = useState<GeneralInfoRow[]>([]);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [currentRecord, setCurrentRecord] = useState<GeneralInfoRow | null>(null);
+  const [formData, setFormData] = useState<Partial<GeneralInfoRow>>({});
+
   // Fetch profile + general information for the logged-in user
   const fetchData = async () => {
     try {
@@ -101,18 +110,20 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
         setProfileDraft({});
       }
 
-      // Fetch general_information row for user (if exists)
-      const { data: genData, error: genError } = await supabase
+      // Fetch general_information records for user
+      const { data: genDataList, error: genError } = await supabase
         .from('general_information')
         .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        .eq('user_id', user.id);
 
       if (genError) throw genError;
-      if (genData) {
-        setGeneral(genData as GeneralInfoRow);
-        setSpecialCase(Boolean((genData as GeneralInfoRow).special_case));
+      if (genDataList && genDataList.length > 0) {
+        setGeneralInfoList(genDataList as GeneralInfoRow[]);
+        // Set the first record as the current general info
+        setGeneral(genDataList[0] as GeneralInfoRow);
+        setSpecialCase(Boolean((genDataList[0] as GeneralInfoRow).special_case));
       } else {
+        setGeneralInfoList([]);
         setGeneral({ user_id: user.id });
         setSpecialCase(false);
       }
@@ -170,6 +181,32 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
     setGeneral((g) => ({ ...g, [key]: value }));
   };
 
+  const handleFormChange = (key: keyof GeneralInfoRow, value: string | null | undefined) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const openAddModal = () => {
+    // Prepare form for creating a new general_information record.
+    // Clear the current `general` object so inputs start empty and we will
+    // perform an INSERT on save rather than updating an existing row.
+    setGeneral({});
+    setSpecialCase(false);
+    setIsCreatingNew(true);
+    setIsFormOpen(true);
+  };
+
+  const openViewModal = (record: GeneralInfoRow) => {
+    setCurrentRecord(record);
+    setIsViewOpen(true);
+  };
+
+  const openEditModal = (record: GeneralInfoRow) => {
+    setCurrentRecord(record);
+    setFormData(record);
+    setSpecialCase(Boolean(record.special_case));
+    setIsEditOpen(true);
+  };
+
   const handleSave = async (e?: React.FormEvent) => {
     e?.preventDefault();
     // If profile edits are enabled, open confirmation dialog first
@@ -186,6 +223,8 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   // Confirmation dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  // Whether the Add form is creating a new record (true) or editing current (false)
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
 
   // Centralized save routine: optionally update profiles as well
   const performSave = async ({ updateProfile }: { updateProfile: boolean }) => {
@@ -210,28 +249,35 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
       const genInsert = genPayload as Database['public']['Tables']['general_information']['Insert'];
 
-      // Some Supabase setups don't have a UNIQUE constraint on user_id, which
-      // makes .upsert({ onConflict: 'user_id' }) fail. To avoid requiring a
-      // DB schema change here, do a safe select -> update/insert flow.
-      const { data: existingGen, error: selectErr } = await supabase
-        .from('general_information')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (selectErr) throw selectErr;
-
-      if (existingGen && (existingGen as { id: string }).id) {
-        const { error: updateErr } = await supabase
-          .from('general_information')
-          .update(genInsert as any)
-          .eq('id', (existingGen as { id: string }).id);
-        if (updateErr) throw updateErr;
-      } else {
+      // If the user opened the Add modal to create a new record, always INSERT
+      // a fresh row. Otherwise (default/edit flow) use select->update/insert so
+      // we don't require a UNIQUE constraint on user_id.
+      if (isCreatingNew) {
         const { error: insertErr } = await supabase
           .from('general_information')
-          .insert(genInsert as any);
+          .insert(genInsert as Database['public']['Tables']['general_information']['Insert']);
         if (insertErr) throw insertErr;
+      } else {
+        const { data: existingGen, error: selectErr } = await supabase
+          .from('general_information')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (selectErr) throw selectErr;
+
+        if (existingGen && (existingGen as { id: string }).id) {
+          const { error: updateErr } = await supabase
+            .from('general_information')
+            .update(genInsert as Database['public']['Tables']['general_information']['Update'])
+            .eq('id', (existingGen as { id: string }).id);
+          if (updateErr) throw updateErr;
+        } else {
+          const { error: insertErr } = await supabase
+            .from('general_information')
+            .insert(genInsert as Database['public']['Tables']['general_information']['Insert']);
+          if (insertErr) throw insertErr;
+        }
       }
 
       if (updateProfile) {
@@ -279,6 +325,36 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   });
 
   // Navigation handler similar to OfficeInformation
+  const handleDownloadXLSX = () => {
+    const exportData = generalInfoList.map((record) => ({
+      [language === 'bn' ? 'পূর্ণ নাম' : 'Full Name']: profile?.full_name || '',
+      [language === 'bn' ? 'পিতার নাম' : "Father's Name"]: record.father_name || '',
+      [language === 'bn' ? 'মাতার নাম' : "Mother's Name"]: record.mother_name || '',
+      [language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group']: record.blood_group || '',
+      [language === 'bn' ? 'বর্তমান ঠিকানা' : 'Current Address']: record.current_address || '',
+      [language === 'bn' ? 'অফিসের ঠিকানা' : 'Office Address']: record.office_address || '',
+      [language === 'bn' ? 'বর্তমান পদে যোগদানের তারিখ' : 'Current Position Joining Date']: record.current_position_joining_date || '',
+      [language === 'bn' ? 'কর্মস্থলের ঠিকানা' : 'Workplace Address']: record.workplace_address || '',
+      [language === 'bn' ? 'কর্মস্থলের ফোন' : 'Workplace Phone']: record.workplace_phone || '',
+      [language === 'bn' ? 'স্থায়ীকরণ আদেশ নং' : 'Confirmation Order No.']: record.confirmation_order_number || '',
+      [language === 'bn' ? 'স্থায়ীকরণ আদেশ তারিখ' : 'Confirmation Order Date']: record.confirmation_order_date || '',
+      [language === 'bn' ? 'মোবাইল ফোন' : 'Mobile Phone']: record.mobile_phone || '',
+      [language === 'bn' ? 'জেলা' : 'District']: profile?.district || '',
+      [language === 'bn' ? 'বিশেষ ক্ষেত্রে' : 'Special Case']: record.special_case ? (language === 'bn' ? 'হ্যাঁ' : 'Yes') : (language === 'bn' ? 'না' : 'No'),
+      [language === 'bn' ? 'বিশেষ রোগের তথ্য' : 'Special Illness Info']: record.special_illness_info || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, language === 'bn' ? 'সাধারণ তথ্য' : 'General Information');
+    XLSX.writeFile(workbook, `general_information_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({
+      title: language === 'bn' ? 'ডাউনলোড সফল' : 'Download Successful',
+      description: language === 'bn' ? 'ফাইলটি ডাউনলোড হয়েছে' : 'File has been downloaded',
+    });
+  };
+
   const handleNavigation = async (section: string) => {
     if (section === 'dashboard') {
       navigate('/');
@@ -341,23 +417,98 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
           </header>
 
           <main className="flex-1 p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-3xl font-bold text-foreground">{language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information'}</h1>
                   <p className="text-muted-foreground mt-1">{language === 'bn' ? 'অনুগ্রহ করে আপনার তথ্য যাচাই ও সম্পূর্ণ করুন' : 'Please verify and complete your information'}</p>
                 </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleDownloadXLSX} variant="outline" className="bg-green-600 hover:bg-green-700 text-white">
+                    <Download className="mr-2 h-4 w-4" />
+                    {language === 'bn' ? 'ডাউনলোড XLSX' : 'Download XLSX'}
+                  </Button>
+                  <Button onClick={openAddModal} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
+                    + {language === 'bn' ? 'নতুন তথ্য' : 'New Information'}
+                  </Button>
+                </div>
               </div>
 
-              {/* Form as modal (matches sample) */}
+              {/* Table View */}
+              <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="text-primary-foreground font-semibold">
+                        {language === 'bn' ? 'পূর্ণ নাম' : 'Full Name'}
+                      </TableHead>
+                      <TableHead className="text-primary-foreground font-semibold">
+                        {language === 'bn' ? 'পিতার নাম' : "Father's Name"}
+                      </TableHead>
+                      <TableHead className="text-primary-foreground font-semibold">
+                        {language === 'bn' ? 'মাতার নাম' : "Mother's Name"}
+                      </TableHead>
+                      <TableHead className="text-primary-foreground font-semibold">
+                        {language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group'}
+                      </TableHead>
+                      <TableHead className="text-primary-foreground font-semibold">
+                        {language === 'bn' ? 'জেলা' : 'District'}
+                      </TableHead>
+                      <TableHead className="text-primary-foreground font-semibold text-center">
+                        {language === 'bn' ? 'কার্যক্রম' : 'Actions'}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          {language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
+                        </TableCell>
+                      </TableRow>
+                    ) : generalInfoList.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          {language === 'bn' ? 'কোন তথ্য পাওয়া যায়নি' : 'No records found'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      generalInfoList.map((record) => (
+                        <TableRow key={record.id} className="hover:bg-muted/50">
+                          <TableCell className="font-medium">{profile?.full_name || '-'}</TableCell>
+                          <TableCell>{record.father_name || '-'}</TableCell>
+                          <TableCell>{record.mother_name || '-'}</TableCell>
+                          <TableCell>{record.blood_group || '-'}</TableCell>
+                          <TableCell>{profile?.district || '-'}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openViewModal(record)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditModal(record)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Form submit comes as modal */}
               <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                <div className="flex items-center gap-2 justify-end">
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
-                      + {language === 'bn' ? 'নতুন তথ্য' : 'New Information'}
-                    </Button>
-                  </DialogTrigger>
-                </div>
 
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
@@ -455,6 +606,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
           </footer>
         </SidebarInset>
       </div>
+
       {/* Confirmation dialog for profile updates */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md">
@@ -476,7 +628,151 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* View Modal */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{language === 'bn' ? 'সাধারণ তথ্য বিবরণ' : 'General Information Details'}</DialogTitle>
+          </DialogHeader>
+          {currentRecord && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'পিতার নাম' : "Father's Name"}</Label>
+                <p className="font-medium">{currentRecord.father_name || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'মাতার নাম' : "Mother's Name"}</Label>
+                <p className="font-medium">{currentRecord.mother_name || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group'}</Label>
+                <p className="font-medium">{currentRecord.blood_group || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'বর্তমান ঠিকানা' : 'Current Address'}</Label>
+                <p className="font-medium">{currentRecord.current_address || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'অফিসের ঠিকানা' : 'Office Address'}</Label>
+                <p className="font-medium">{currentRecord.office_address || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'বর্তমান পদে যোগদানের তারিখ' : 'Current Position Joining Date'}</Label>
+                <p className="font-medium">{currentRecord.current_position_joining_date || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'কর্মস্থলের ঠিকানা' : 'Workplace Address'}</Label>
+                <p className="font-medium">{currentRecord.workplace_address || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'কর্মস্থলের ফোন' : 'Workplace Phone'}</Label>
+                <p className="font-medium">{currentRecord.workplace_phone || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'স্থায়ীকরণ আদেশ নং' : 'Confirmation Order No.'}</Label>
+                <p className="font-medium">{currentRecord.confirmation_order_number || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'স্থায়ীকরণ আদেশ তারিখ' : 'Confirmation Order Date'}</Label>
+                <p className="font-medium">{currentRecord.confirmation_order_date || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'মোবাইল ফোন' : 'Mobile Phone'}</Label>
+                <p className="font-medium">{currentRecord.mobile_phone || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">{language === 'bn' ? 'বিশেষ ক্ষেত্রে' : 'Special Case'}</Label>
+                <p className="font-medium">{currentRecord.special_case ? (language === 'bn' ? 'হ্যাঁ' : 'Yes') : (language === 'bn' ? 'না' : 'No')}</p>
+              </div>
+              {currentRecord.special_case && currentRecord.special_illness_info && (
+                <div className="col-span-2">
+                  <Label className="text-muted-foreground">{language === 'bn' ? 'বিশেষ রোগের তথ্য' : 'Special Illness Info'}</Label>
+                  <p className="font-medium">{currentRecord.special_illness_info}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{language === 'bn' ? 'সাধারণ তথ্য সম্পাদনা' : 'Edit General Information'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            if (!currentRecord) return;
+            
+            try {
+              setLoading(true);
+              const { error } = await supabase
+                .from('general_information')
+                .update({
+                  ...formData,
+                  special_case: specialCase,
+                })
+                .eq('id', currentRecord.id);
+              
+              if (error) throw error;
+              
+              toast({
+                title: language === 'bn' ? 'সফল' : 'Success',
+                description: language === 'bn' ? 'তথ্য আপডেট করা হয়েছে' : 'Information updated successfully',
+              });
+              
+              setIsEditOpen(false);
+              fetchData();
+            } catch (error) {
+              console.error('Update error:', error);
+              toast({
+                title: language === 'bn' ? 'ত্রুটি' : 'Error',
+                description: language === 'bn' ? 'আপডেট করতে ব্যর্থ' : 'Failed to update',
+                variant: 'destructive',
+              });
+            } finally {
+              setLoading(false);
+            }
+          }} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {missingGeneralFields.map((f) => (
+                <div className="space-y-2" key={String(f.key)}>
+                  <Label htmlFor={`edit-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
+                  <Input
+                    id={`edit-${String(f.key)}`}
+                    type={f.type === 'date' ? 'date' : 'text'}
+                    value={String((formData as Partial<GeneralInfoRow>)[f.key] ?? '')}
+                    onChange={(e) => handleFormChange(f.key, e.target.value)}
+                  />
+                </div>
+              ))}
+              <div className="col-span-1 md:col-span-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={specialCase} onCheckedChange={(v) => setSpecialCase(Boolean(v))} id="edit-special-case" />
+                  <Label htmlFor="edit-special-case">{language === 'bn' ? 'বিশেষ ক্ষেত্রে প্রযোজ্য' : 'Special Case'}</Label>
+                </div>
+                {specialCase && (
+                  <div className="mt-2">
+                    <Label htmlFor="edit-special_illness_info">{language === 'bn' ? 'বিশেষ কোন রোগে ভুগিলে তার তথ্য' : 'Special illness information'}</Label>
+                    <Input
+                      id="edit-special_illness_info"
+                      type="text"
+                      value={String((formData as Partial<GeneralInfoRow>).special_illness_info ?? '')}
+                      onChange={(e) => handleFormChange('special_illness_info', e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>{language === 'bn' ? 'বাতিল' : 'Cancel'}</Button>
+              <Button type="submit">{language === 'bn' ? 'আপডেট করুন' : 'Update'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
-
