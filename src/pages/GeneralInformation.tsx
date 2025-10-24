@@ -12,7 +12,7 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CopyRights } from '@/components/CopyRights';
-import { Menu, Bell, Edit, Download, Eye } from 'lucide-react';
+import { Menu, Bell, Edit, Download, Eye, Plus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Database } from '@/integrations/supabase/types';
@@ -76,6 +76,8 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<GeneralInfoRow | null>(null);
   const [formData, setFormData] = useState<Partial<GeneralInfoRow>>({});
+  // Selection state for table rows
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Fetch profile + general information for the logged-in user
   const fetchData = async () => {
@@ -217,6 +219,68 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
     setFormData(record);
     setSpecialCase(Boolean(record.special_case));
     setIsEditOpen(true);
+  };
+
+  // Toggle a single row selection
+  const toggleRowSelection = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  // Toggle select all / clear all
+  const toggleSelectAll = () => {
+    if (selectedIds.length === generalInfoList.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(generalInfoList.map((r) => r.id!).filter(Boolean));
+    }
+  };
+  // Delete confirmation dialog state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<'selected' | 'all' | null>(null);
+
+  // Open confirmation for deleting selected rows
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0) {
+      toast({ title: language === 'bn' ? 'নির্বাচন নেই' : 'No selection', description: language === 'bn' ? 'অনুগ্রহ করে প্রথমে একটি বা একাধিক সারি নির্বাচন করুন' : 'Please select one or more rows first', variant: 'destructive' });
+      return;
+    }
+    setDeleteMode('selected');
+    setDeleteConfirmOpen(true);
+  };
+
+  // Open confirmation for deleting all rows
+  const handleDeleteAll = () => {
+    setDeleteMode('all');
+    setDeleteConfirmOpen(true);
+  };
+
+  // Perform deletion after user confirms in-modal
+  const performDeleteConfirmed = async () => {
+    if (!deleteMode) return;
+    try {
+      setLoading(true);
+      if (deleteMode === 'selected') {
+        const { error } = await supabase.from('general_information').delete().in('id', selectedIds);
+        if (error) throw error;
+        toast({ title: language === 'bn' ? 'সফল' : 'Success', description: language === 'bn' ? 'নির্বাচিত তথ্য মুছে ফেলা হয়েছে' : 'Selected items deleted' });
+        setSelectedIds([]);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Unauthenticated');
+        const { error } = await supabase.from('general_information').delete().eq('user_id', user.id);
+        if (error) throw error;
+        toast({ title: language === 'bn' ? 'সফল' : 'Success', description: language === 'bn' ? 'সব তথ্য মুছে ফেলা হয়েছে' : 'All records deleted' });
+        setSelectedIds([]);
+      }
+      await fetchData();
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'মুছতে ব্যর্থ হয়েছে' : 'Failed to delete', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+      setDeleteConfirmOpen(false);
+      setDeleteMode(null);
+    }
   };
 
   const handleSave = async (e?: React.FormEvent) => {
@@ -363,7 +427,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, language === 'bn' ? 'সাধারণ তথ্য' : 'General Information');
     XLSX.writeFile(workbook, `general_information_${new Date().toISOString().split('T')[0]}.xlsx`);
-    
+
     toast({
       title: language === 'bn' ? 'ডাউনলোড সফল' : 'Download Successful',
       description: language === 'bn' ? 'ফাইলটি ডাউনলোড হয়েছে' : 'File has been downloaded',
@@ -439,12 +503,26 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                   <p className="text-muted-foreground mt-1">{language === 'bn' ? 'অনুগ্রহ করে আপনার তথ্য যাচাই ও সম্পূর্ণ করুন' : 'Please verify and complete your information'}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={handleDownloadXLSX} variant="outline" className="bg-green-600 hover:bg-green-700 text-white">
-                    <Download className="mr-2 h-4 w-4" />
-                    {language === 'bn' ? 'ডাউনলোড XLSX' : 'Download XLSX'}
-                  </Button>
+                  {/* form btn */}
                   <Button onClick={openAddModal} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
-                    + {language === 'bn' ? 'নতুন তথ্য' : 'New Information'}
+                    <Plus className="h-4 w-4 mr-2" />
+                    {language === 'bn' ? 'নতুন তথ্য' : 'New Information'}
+                  </Button>
+
+                  {/* Delete selected */}
+                  <Button onClick={handleDeleteSelected} variant="destructive" className="hidden sm:inline-flex" disabled={selectedIds.length === 0}>
+                    {language === 'bn' ? 'মুছুন' : 'Delete'}
+                  </Button>
+
+                  {/* Delete all */}
+                  <Button onClick={handleDeleteAll} variant="destructive" className="hidden sm:inline-flex bg-red-950 hover:bg-red-900 text-white">
+                    {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
+                  </Button>
+
+                  {/* download btn */}
+                  <Button onClick={handleDownloadXLSX} variant="outline" className="bg-white hover:bg-black underline text-black hover:text-white">
+                    <Download className="mr-2 h-4 w-4" />
+                    {language === 'bn' ? 'ডাউনলোড' : 'Download'}
                   </Button>
                 </div>
               </div>
@@ -453,23 +531,31 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
               <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-primary hover:bg-primary">
-                      <TableHead className="text-primary-foreground font-semibold">
+                    <TableRow className="bg-green-800 text-white hover:bg-green-800 border-b-[2px] border-green-900 dark:border-green-700 shadow-sm">
+                      <TableHead className="font-semibold text-left text-white text-xs">
+                        <Checkbox
+                          checked={selectedIds.length > 0 && selectedIds.length === generalInfoList.length}
+                          onCheckedChange={toggleSelectAll}
+                          id="select-all"
+                          className='bg-white border-2 border-green-700 dark:border-green-600 hover:border-green-900 hover:dark:border-green-500'
+                        />
+                      </TableHead>
+                      <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">
                         {language === 'bn' ? 'পূর্ণ নাম' : 'Full Name'}
                       </TableHead>
-                      <TableHead className="text-primary-foreground font-semibold">
+                      <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">
                         {language === 'bn' ? 'পিতার নাম' : "Father's Name"}
                       </TableHead>
-                      <TableHead className="text-primary-foreground font-semibold">
+                      <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">
                         {language === 'bn' ? 'মাতার নাম' : "Mother's Name"}
                       </TableHead>
-                      <TableHead className="text-primary-foreground font-semibold">
+                      <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">
                         {language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group'}
                       </TableHead>
-                      <TableHead className="text-primary-foreground font-semibold">
+                      <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">
                         {language === 'bn' ? 'জেলা' : 'District'}
                       </TableHead>
-                      <TableHead className="text-primary-foreground font-semibold text-center">
+                      <TableHead className="text-primary-foreground font-semibold text-center text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">
                         {language === 'bn' ? 'কার্যক্রম' : 'Actions'}
                       </TableHead>
                     </TableRow>
@@ -490,6 +576,13 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                     ) : (
                       generalInfoList.map((record) => (
                         <TableRow key={record.id} className="hover:bg-muted/50">
+                          <TableCell className="w-12">
+                            <Checkbox
+                              checked={selectedIds.includes(record.id!)}
+                              onCheckedChange={() => toggleRowSelection(record.id!)}
+                              id={`select-${record.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">{profile?.full_name || '-'}</TableCell>
                           <TableCell>{record.father_name || '-'}</TableCell>
                           <TableCell>{record.mother_name || '-'}</TableCell>
@@ -535,11 +628,11 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                   <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
                     <section>
                       <div className='mb-4'>
-                      {/* <div className='flex items-center justify-between mb-4'> */}
+                        {/* <div className='flex items-center justify-between mb-4'> */}
                         <h3 className="font-semibold text-destructive">{language === 'bn' ? 'স্বয়ংক্রিয়ভাবে লোডিত প্রোফাইল' : 'Auto-filled profile'}</h3>
                         {/* <div className="flex items-center gap-2"> */}
                         <div className="gap-2">
-                        <p className="text-sm text-muted-foreground">{language === 'bn' ? '* আপনার প্রোফাইল তথ্য এখানে প্রদর্শিত হচ্ছে। প্রয়োজনে প্রোফাইলে যান এবং সেখান থেকে এটি পরিবর্তন করুন। ' : '* Your profile information is displayed here. If necessary go to profile and change it from there.'}</p>
+                          <p className="text-sm text-muted-foreground">{language === 'bn' ? '* আপনার প্রোফাইল তথ্য এখানে প্রদর্শিত হচ্ছে। প্রয়োজনে প্রোফাইলে যান এবং সেখান থেকে এটি পরিবর্তন করুন। ' : '* Your profile information is displayed here. If necessary go to profile and change it from there.'}</p>
                           {/* <Button variant={editProfileFields ? 'default' : 'outline'} onClick={() => setEditProfileFields((s) => !s)}>
                             <Edit className="mr-2 h-4 w-4" />
                             {language === 'bn' ? (editProfileFields ? 'প্রোফাইল সম্পাদনা চলছে' : 'প্রোফাইল সম্পাদনা') : (editProfileFields ? 'Editing Profile' : 'Edit Profile')}
@@ -615,8 +708,8 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                           {specialCase && (
                             <div className="mt-2">
                               <Label htmlFor="special_illness_info">{language === 'bn' ? 'বিশেষ কোন রোগে ভুগিলে তার তথ্য' : 'Special illness information'}</Label>
-                              <Input id="special_illness_info" type="text" placeholder={language === 'bn' ? 'আপনার দৈহিক অবস্থা' : 'Your condition details'} 
-                              value={String((general as Partial<GeneralInfoRow>).special_illness_info ?? '')} onChange={(e) => handleGeneralChange('special_illness_info', e.target.value)} />
+                              <Input id="special_illness_info" type="text" placeholder={language === 'bn' ? 'আপনার দৈহিক অবস্থা' : 'Your condition details'}
+                                value={String((general as Partial<GeneralInfoRow>).special_illness_info ?? '')} onChange={(e) => handleGeneralChange('special_illness_info', e.target.value)} />
                             </div>
                           )}
                         </div>
@@ -657,6 +750,24 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
               performSave({ updateProfile: false });
             }}>{language === 'bn' ? 'বাতিল' : 'Cancel'}</Button>
             <Button className="bg-destructive hover:bg-red-950 text-white" onClick={() => performSave({ updateProfile: true })}>{language === 'bn' ? 'হ্যাঁ, আপডেট করুন' : 'Yes, update'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation dialog for deletions (selected / all) */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{language === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?'}</DialogTitle>
+            <DialogDescription>
+              {deleteMode === 'selected'
+                ? (language === 'bn' ? 'আপনি নির্বাচিত আইটেম(গুলি) স্থায়ভাবে মুছে ফেলতে যাচ্ছেন। এটি পূর্বাবস্থায় ফেরত আনবে না।' : 'You are about to permanently delete the selected items. This cannot be undone.')
+                : (language === 'bn' ? 'আপনি সকল তথ্য স্থায়ভাবে মুছে ফেলতে যাচ্ছেন। এটি পূর্বাবস্থায় ফেরত আনবে না।' : 'You are about to permanently delete ALL records. This cannot be undone.')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteConfirmOpen(false); setDeleteMode(null); }}>{language === 'bn' ? 'বাতিল' : 'Cancel'}</Button>
+            <Button className="bg-destructive hover:bg-red-950 text-white" onClick={performDeleteConfirmed}>{language === 'bn' ? 'মুছুন' : 'Delete'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -737,7 +848,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
           <form onSubmit={async (e) => {
             e.preventDefault();
             if (!currentRecord) return;
-            
+
             try {
               setLoading(true);
               const { error } = await supabase
@@ -747,14 +858,14 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                   special_case: specialCase,
                 })
                 .eq('id', currentRecord.id);
-              
+
               if (error) throw error;
-              
+
               toast({
                 title: language === 'bn' ? 'সফল' : 'Success',
                 description: language === 'bn' ? 'তথ্য আপডেট করা হয়েছে' : 'Information updated successfully',
               });
-              
+
               setIsEditOpen(false);
               fetchData();
             } catch (error) {
@@ -768,7 +879,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
               setLoading(false);
             }
           }} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {missingGeneralFields.map((f) => {
                 const editVal = (formData as Partial<GeneralInfoRow>)[f.key];
                 return (
