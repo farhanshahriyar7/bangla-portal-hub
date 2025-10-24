@@ -172,6 +172,18 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
     { key: 'mobile_phone', labelBn: 'মোবাইল ফোন', labelEn: 'Mobile Phone' },
   ];
 
+  // Blood group options used in both Add and Edit forms
+  const bloodGroupOptions = [
+    { value: 'A+ve', label: 'A+ve (A positive)' },
+    { value: 'A-ve', label: 'A−ve (A negative)' },
+    { value: 'B+ve', label: 'B+ve (B positive)' },
+    { value: 'B-ve', label: 'B−ve (B negative)' },
+    { value: 'AB+ve', label: 'AB+ve (AB positive)' },
+    { value: 'AB-ve', label: 'AB−ve (AB negative)' },
+    { value: 'O+ve', label: 'O+ve (O positive)' },
+    { value: 'O-ve', label: 'O−ve (O negative)' },
+  ];
+
   const handleProfileDraftChange = (key: keyof ProfileRow, value: string | null | undefined) => {
     setProfileDraft((p) => ({ ...p, [key]: value }));
 
@@ -249,9 +261,6 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
       const genInsert = genPayload as Database['public']['Tables']['general_information']['Insert'];
 
-      // If the user opened the Add modal to create a new record, always INSERT
-      // a fresh row. Otherwise (default/edit flow) use select->update/insert so
-      // we don't require a UNIQUE constraint on user_id.
       if (isCreatingNew) {
         const { error: insertErr } = await supabase
           .from('general_information')
@@ -328,18 +337,24 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   const handleDownloadXLSX = () => {
     const exportData = generalInfoList.map((record) => ({
       [language === 'bn' ? 'পূর্ণ নাম' : 'Full Name']: profile?.full_name || '',
+      [language === 'bn' ? 'জন্ম তারিখ' : 'Date of Birth']: profile?.date_of_birth || '', // added date of birth
       [language === 'bn' ? 'পিতার নাম' : "Father's Name"]: record.father_name || '',
       [language === 'bn' ? 'মাতার নাম' : "Mother's Name"]: record.mother_name || '',
-      [language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group']: record.blood_group || '',
+      [language === 'bn' ? 'স্থায়ী ঠিকানা' : 'Permanent Address']: profile?.address_line1 || '', // added address_line1
       [language === 'bn' ? 'বর্তমান ঠিকানা' : 'Current Address']: record.current_address || '',
-      [language === 'bn' ? 'অফিসের ঠিকানা' : 'Office Address']: record.office_address || '',
+      [language === 'bn' ? 'নিজ জেলা' : 'District']: profile?.district || '', // added district
+      [language === 'bn' ? 'সরকারী চাকরিতে যোগদানের তারিখ' : 'Joining Date']: profile?.joining_date || '', // added joining date
       [language === 'bn' ? 'বর্তমান পদে যোগদানের তারিখ' : 'Current Position Joining Date']: record.current_position_joining_date || '',
+      [language === 'bn' ? 'বর্তমান পদবী' : 'Designation']: profile?.designation || '', // added designation
       [language === 'bn' ? 'কর্মস্থলের ঠিকানা' : 'Workplace Address']: record.workplace_address || '',
       [language === 'bn' ? 'কর্মস্থলের ফোন' : 'Workplace Phone']: record.workplace_phone || '',
-      [language === 'bn' ? 'স্থায়ীকরণ আদেশ নং' : 'Confirmation Order No.']: record.confirmation_order_number || '',
-      [language === 'bn' ? 'স্থায়ীকরণ আদেশ তারিখ' : 'Confirmation Order Date']: record.confirmation_order_date || '',
+      [language === 'bn' ? 'অফিসের ঠিকানা' : 'Office Address']: record.office_address || '',
+      [language === 'bn' ? 'চাকরি স্থায়ীকরণের সরকারী আদেশ নং' : 'Confirmation Order No.']: record.confirmation_order_number || '',
+      [language === 'bn' ? 'চাকরি স্থায়ীকরণের সরকারী আদেশ তারিখ' : 'Confirmation Order Date']: record.confirmation_order_date || '',
+      [language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group']: record.blood_group || '',
+      [language === 'bn' ? 'ফোন' : 'Phone']: profile?.phone || '', // added phone
       [language === 'bn' ? 'মোবাইল ফোন' : 'Mobile Phone']: record.mobile_phone || '',
-      [language === 'bn' ? 'জেলা' : 'District']: profile?.district || '',
+      [language === 'bn' ? 'ই-মেইল' : 'Email']: profile?.email || '', // added email
       [language === 'bn' ? 'বিশেষ ক্ষেত্রে' : 'Special Case']: record.special_case ? (language === 'bn' ? 'হ্যাঁ' : 'Yes') : (language === 'bn' ? 'না' : 'No'),
       [language === 'bn' ? 'বিশেষ রোগের তথ্য' : 'Special Illness Info']: record.special_illness_info || '',
     }));
@@ -519,9 +534,12 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
                   <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
                     <section>
-                      <div className='flex items-center justify-between mb-4'>
-                        <h3 className="font-semibold mb-3">{language === 'bn' ? 'স্বয়ংক্রিয়ভাবে লোডিত প্রোফাইল' : 'Auto-filled profile'}</h3>
-                        <div className="flex items-center gap-2">
+                      <div className='mb-4'>
+                      {/* <div className='flex items-center justify-between mb-4'> */}
+                        <h3 className="font-semibold text-destructive">{language === 'bn' ? 'স্বয়ংক্রিয়ভাবে লোডিত প্রোফাইল' : 'Auto-filled profile'}</h3>
+                        {/* <div className="flex items-center gap-2"> */}
+                        <div className="gap-2">
+                        <p className="text-sm text-muted-foreground">{language === 'bn' ? '* আপনার প্রোফাইল তথ্য এখানে প্রদর্শিত হচ্ছে। প্রয়োজনে প্রোফাইলে যান এবং সেখান থেকে এটি পরিবর্তন করুন। ' : '* Your profile information is displayed here. If necessary go to profile and change it from there.'}</p>
                           {/* <Button variant={editProfileFields ? 'default' : 'outline'} onClick={() => setEditProfileFields((s) => !s)}>
                             <Edit className="mr-2 h-4 w-4" />
                             {language === 'bn' ? (editProfileFields ? 'প্রোফাইল সম্পাদনা চলছে' : 'প্রোফাইল সম্পাদনা') : (editProfileFields ? 'Editing Profile' : 'Edit Profile')}
@@ -564,13 +582,27 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                           return (
                             <div className="space-y-2" key={String(f.key)}>
                               <Label htmlFor={`gen-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
-                              <Input
-                                id={`gen-${String(f.key)}`}
-                                type={f.type === 'date' ? 'date' : 'text'}
-                                value={String(val ?? '')}
-                                onChange={(e) => handleGeneralChange(f.key, e.target.value)}
-                                placeholder={language === 'bn' ? 'অনুগ্রহ করে লিখুন' : 'Please enter'}
-                              />
+                              {f.key === 'blood_group' ? (
+                                <select
+                                  id={`gen-${String(f.key)}`}
+                                  className="w-full rounded-md border input px-3 py-2"
+                                  value={String(val ?? '')}
+                                  onChange={(e) => handleGeneralChange(f.key, e.target.value)}
+                                >
+                                  <option value="">{language === 'bn' ? 'অনুগ্রহ করে নির্বাচন করুন' : 'Please select'}</option>
+                                  {bloodGroupOptions.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <Input
+                                  id={`gen-${String(f.key)}`}
+                                  type={f.type === 'date' ? 'date' : 'text'}
+                                  value={String(val ?? '')}
+                                  onChange={(e) => handleGeneralChange(f.key, e.target.value)}
+                                  placeholder={language === 'bn' ? 'অনুগ্রহ করে লিখুন' : 'Please enter'}
+                                />
+                              )}
                             </div>
                           );
                         })}
@@ -736,18 +768,35 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
               setLoading(false);
             }
           }} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {missingGeneralFields.map((f) => (
-                <div className="space-y-2" key={String(f.key)}>
-                  <Label htmlFor={`edit-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
-                  <Input
-                    id={`edit-${String(f.key)}`}
-                    type={f.type === 'date' ? 'date' : 'text'}
-                    value={String((formData as Partial<GeneralInfoRow>)[f.key] ?? '')}
-                    onChange={(e) => handleFormChange(f.key, e.target.value)}
-                  />
-                </div>
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {missingGeneralFields.map((f) => {
+                const editVal = (formData as Partial<GeneralInfoRow>)[f.key];
+                return (
+                  <div className="space-y-2" key={String(f.key)}>
+                    <Label htmlFor={`edit-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
+                    {f.key === 'blood_group' ? (
+                      <select
+                        id={`edit-${String(f.key)}`}
+                        className="w-full rounded-md border input px-3 py-2"
+                        value={String(editVal ?? '')}
+                        onChange={(e) => handleFormChange(f.key, e.target.value)}
+                      >
+                        <option value="" className='text-base'>{language === 'bn' ? 'আপনার রক্তের গ্রুপ নির্বাচন করুন' : 'Please select'}</option>
+                        {bloodGroupOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input
+                        id={`edit-${String(f.key)}`}
+                        type={f.type === 'date' ? 'date' : 'text'}
+                        value={String(editVal ?? '')}
+                        onChange={(e) => handleFormChange(f.key, e.target.value)}
+                      />
+                    )}
+                  </div>
+                );
+              })}
               <div className="col-span-1 md:col-span-2 space-y-2">
                 <div className="flex items-center gap-2">
                   <Checkbox checked={specialCase} onCheckedChange={(v) => setSpecialCase(Boolean(v))} id="edit-special-case" />
