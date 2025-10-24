@@ -151,7 +151,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
     { key: 'designation', labelBn: 'বর্তমান পদবী', labelEn: 'Designation' },
     { key: 'address_line1', labelBn: 'স্থায়ী ঠিকানা', labelEn: 'Permanent Address' },
     { key: 'district', labelBn: 'নিজ জেলা', labelEn: 'District' },
-    { key: 'joining_date', labelBn: 'চাকরিতে যোগদানের তারিখ', labelEn: 'Joining Date', type: 'date' },
+    { key: 'joining_date', labelBn: 'সরকারী চাকরিতে যোগদানের তারিখ', labelEn: 'Joining Date', type: 'date' },
     { key: 'phone', labelBn: 'ফোন', labelEn: 'Phone' },
     { key: 'email', labelBn: 'ই-মেইল', labelEn: 'Email' },
   ];
@@ -163,7 +163,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
     { key: 'mother_name', labelBn: 'মাতার নাম', labelEn: "Mother's Name" },
     { key: 'blood_group', labelBn: 'রক্তের গ্রুপ', labelEn: 'Blood Group' },
     { key: 'current_address', labelBn: 'আপনার বর্তমান ঠিকানা', labelEn: 'Your Current Address' },
-    { key: 'office_address', labelBn: 'অফিসের ঠিকানা', labelEn: 'Office Address' },
+    // { key: 'office_address', labelBn: 'অফিসের ঠিকানা', labelEn: 'Office Address' },
     { key: 'current_position_joining_date', labelBn: 'বর্তমান পদে যোগদানের তারিখ', labelEn: 'Current Position Joining Date', type: 'date' },
     { key: 'workplace_address', labelBn: 'কর্মস্থলের ঠিকানা', labelEn: 'Workplace Address' },
     { key: 'workplace_phone', labelBn: 'কর্মস্থলের ফোন নম্বর', labelEn: 'Workplace Phone' },
