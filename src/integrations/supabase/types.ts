@@ -74,7 +74,13 @@ export type Database = {
           office_address: string | null
           blood_group: string | null
           current_position_joining_date: string | null
-          correction_date: string | null
+          workplace_address: string | null
+          workplace_phone: string | null
+          current_address: string | null
+          confirmation_order_number: string | null
+          confirmation_order_date: string | null
+          mobile_phone: string | null
+          special_illness_info: string | null
           special_case: boolean | null
           created_at: string | null
           updated_at: string | null
@@ -87,7 +93,13 @@ export type Database = {
           office_address?: string | null
           blood_group?: string | null
           current_position_joining_date?: string | null
-          correction_date?: string | null
+          workplace_address?: string | null
+          workplace_phone?: string | null
+          current_address?: string | null
+          confirmation_order_number?: string | null
+          confirmation_order_date?: string | null
+          mobile_phone?: string | null
+          special_illness_info?: string | null
           special_case?: boolean | null
           created_at?: string | null
           updated_at?: string | null
@@ -100,7 +112,13 @@ export type Database = {
           office_address?: string | null
           blood_group?: string | null
           current_position_joining_date?: string | null
-          correction_date?: string | null
+          workplace_address?: string | null
+          workplace_phone?: string | null
+          current_address?: string | null
+          confirmation_order_number?: string | null
+          confirmation_order_date?: string | null
+          mobile_phone?: string | null
+          special_illness_info?: string | null
           special_case?: boolean | null
           created_at?: string | null
           updated_at?: string | null

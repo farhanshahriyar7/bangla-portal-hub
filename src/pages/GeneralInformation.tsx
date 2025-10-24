@@ -150,12 +150,12 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   const missingGeneralFields: Array<{ key: keyof GeneralInfoRow; labelBn: string; labelEn: string; type?: string }> = [
     { key: 'father_name', labelBn: 'পিতার নাম', labelEn: "Father's Name" },
     { key: 'mother_name', labelBn: 'মাতার নাম', labelEn: "Mother's Name" },
-    { key: 'office_address', labelBn: 'অফিসের ঠিকানা', labelEn: 'Office Address' },
     { key: 'blood_group', labelBn: 'রক্তের গ্রুপ', labelEn: 'Blood Group' },
+    { key: 'current_address', labelBn: 'আপনার বর্তমান ঠিকানা', labelEn: 'Your Current Address' },
+    { key: 'office_address', labelBn: 'অফিসের ঠিকানা', labelEn: 'Office Address' },
     { key: 'current_position_joining_date', labelBn: 'বর্তমান পদে যোগদানের তারিখ', labelEn: 'Current Position Joining Date', type: 'date' },
     { key: 'workplace_address', labelBn: 'কর্মস্থলের ঠিকানা', labelEn: 'Workplace Address' },
     { key: 'workplace_phone', labelBn: 'কর্মস্থলের ফোন নম্বর', labelEn: 'Workplace Phone' },
-    { key: 'current_address', labelBn: 'বর্তমান ঠিকানা', labelEn: 'Current Address' },
     { key: 'confirmation_order_number', labelBn: 'চাকরি স্থায়ীকরণের সরকারি আদেশ নং', labelEn: 'Confirmation Order No.' },
     { key: 'confirmation_order_date', labelBn: 'চাকরি স্থায়ীকরণের সরকারি আদেশ তারিখ', labelEn: 'Confirmation Order Date', type: 'date' },
     { key: 'mobile_phone', labelBn: 'মোবাইল ফোন', labelEn: 'Mobile Phone' },
@@ -163,6 +163,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
   const handleProfileDraftChange = (key: keyof ProfileRow, value: string | null | undefined) => {
     setProfileDraft((p) => ({ ...p, [key]: value }));
+
   };
 
   const handleGeneralChange = (key: keyof GeneralInfoRow, value: string | null | undefined) => {
@@ -208,11 +209,30 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
       };
 
       const genInsert = genPayload as Database['public']['Tables']['general_information']['Insert'];
-      const { error: upsertErr } = await supabase
-        .from('general_information')
-        .upsert(genInsert, { onConflict: 'user_id' });
 
-      if (upsertErr) throw upsertErr;
+      // Some Supabase setups don't have a UNIQUE constraint on user_id, which
+      // makes .upsert({ onConflict: 'user_id' }) fail. To avoid requiring a
+      // DB schema change here, do a safe select -> update/insert flow.
+      const { data: existingGen, error: selectErr } = await supabase
+        .from('general_information')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (selectErr) throw selectErr;
+
+      if (existingGen && (existingGen as { id: string }).id) {
+        const { error: updateErr } = await supabase
+          .from('general_information')
+          .update(genInsert as any)
+          .eq('id', (existingGen as { id: string }).id);
+        if (updateErr) throw updateErr;
+      } else {
+        const { error: insertErr } = await supabase
+          .from('general_information')
+          .insert(genInsert as any);
+        if (insertErr) throw insertErr;
+      }
 
       if (updateProfile) {
         const updatePayload: Partial<ProfileRow> = {};
@@ -406,13 +426,14 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                         <div className="col-span-1 md:col-span-2 space-y-2">
                           <div className="flex items-center gap-2">
                             <Checkbox checked={specialCase} onCheckedChange={(v) => setSpecialCase(Boolean(v))} id="special-case" />
-                            <Label htmlFor="special-case">{language === 'bn' ? 'বিশেষ ক্ষেত্রে' : 'Special Case'}</Label>
+                            <Label htmlFor="special-case">{language === 'bn' ? 'বিশেষ ক্ষেত্রে প্রযোজ্য' : 'Special Case purpose'}</Label>
                           </div>
 
                           {specialCase && (
                             <div className="mt-2">
                               <Label htmlFor="special_illness_info">{language === 'bn' ? 'বিশেষ কোন রোগে ভুগিলে তার তথ্য' : 'Special illness information'}</Label>
-                              <Input id="special_illness_info" type="text" value={String((general as Partial<GeneralInfoRow>).special_illness_info ?? '')} onChange={(e) => handleGeneralChange('special_illness_info', e.target.value)} />
+                              <Input id="special_illness_info" type="text" placeholder={language === 'bn' ? 'আপনার দৈহিক অবস্থা' : 'Your condition details'} 
+                              value={String((general as Partial<GeneralInfoRow>).special_illness_info ?? '')} onChange={(e) => handleGeneralChange('special_illness_info', e.target.value)} />
                             </div>
                           )}
                         </div>
