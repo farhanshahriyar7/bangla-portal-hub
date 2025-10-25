@@ -57,6 +57,16 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
       return;
     }
 
+    if (section === 'general-information') {
+      navigate('/general-information');
+      return;
+    }
+
+    if (section === "notifications") {
+      navigate("/notifications");
+      return;
+    }
+
     if (section === "security") {
       navigate("/security");
       return;

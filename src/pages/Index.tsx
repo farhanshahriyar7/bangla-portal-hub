@@ -202,6 +202,12 @@ const Index = () => {
       return;
     }
 
+    // Notifications page
+    if (section === "notifications") {
+      navigate("/notifications");
+      return;
+    }
+
     if (section === "security") {
       navigate("/security");
       return;

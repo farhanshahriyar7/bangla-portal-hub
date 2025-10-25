@@ -445,6 +445,11 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
       return;
     }
 
+    if (section === 'notifications') {
+      navigate('/notifications');
+      return;
+    }
+
     if (section === 'security') {
       navigate('/security');
       return;

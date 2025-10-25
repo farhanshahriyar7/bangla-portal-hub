@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { WelcomeHeader } from "@/components/WelcomeHeader";
-import { Bell, Filter, Download } from "lucide-react";
+import { Bell, Filter, Download, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -23,8 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from '@/hooks/use-toast';
 // import { supabase } from "@/integrations/supabase/client";
-// import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from "xlsx";
 
 interface ActivityLog {
@@ -39,7 +40,9 @@ interface ActivityLog {
 
 const Notifications = ({ language }: { language: "en" | "bn" }) => {
   const navigate = useNavigate();
-  // const { user } = useAuth();
+  const { user } = useAuth();
+  const { signOut } = useAuth();
+  const { toast } = useToast();
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<ActivityLog[]>([]);
   const [filterType, setFilterType] = useState<string>("all");
@@ -197,102 +200,153 @@ const Notifications = ({ language }: { language: "en" | "bn" }) => {
     XLSX.writeFile(workbook, `activity_logs_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
+  const handleNavigation = async (section: string) => {
+    if (section === 'dashboard') {
+      navigate('/');
+      return;
+    }
+
+    if (section === 'office-information') {
+      navigate('/office-information');
+      return;
+    }
+
+    if (section === 'general-information') {
+      navigate('/general-information');
+      return;
+    }
+
+    if (section === 'security') {
+      navigate('/security');
+      return;
+    }
+    if (section === 'settings') {
+      navigate('/settings');
+      return;
+    }
+    if (section === 'logout') {
+      try {
+        await signOut();
+        toast({
+          title: language === 'bn' ? 'লগ আউট' : 'Logout',
+          description: language === 'bn' ? 'আপনি সফলভাবে লগআউট হয়েছেন' : 'You have been successfully logged out.',
+        });
+        navigate('/login');
+      } catch (err) {
+        toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'লগআউট বিফল' : 'Failed to logout', variant: 'destructive' });
+      }
+      return;
+    }
+
+    toast({ title: language === 'bn' ? 'শীঘ্রই আসছে' : 'Coming Soon', description: language === 'bn' ? 'এই পেজটি শীঘ্রই উপলব্ধ হবে।' : 'This page will be available soon.' });
+  };
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        <AppSidebar language={language} onNavigate={navigate} />
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="flex justify-between items-center mb-6">
-            <WelcomeHeader language={language} />
-            <div className="flex gap-2">
-              <ThemeToggle />
-              <LanguageToggle 
-                currentLanguage={language} 
-                onLanguageChange={() => {}} 
-              />
-            </div>
-          </div>
+        <AppSidebar language={language} onNavigate={handleNavigation} />
+        <SidebarInset className="flex-1">
+          <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+            <div className="flex h-16 items-center gap-4 px-6">
+              <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
+                <Menu className="h-4 w-4" />
+              </SidebarTrigger>
 
-          <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <Bell className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-3xl font-bold">{t.title}</h1>
-                <p className="text-muted-foreground">{t.subtitle}</p>
+              <div className="flex-1" />
+
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" onClick={() => handleNavigation('notifications')} className="relative">
+                  <Bell className="h-4 w-4" />
+                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full"></span>
+                </Button>
+                <LanguageToggle onLanguageChange={() => { }} currentLanguage={language} />
+                <ThemeToggle />
               </div>
             </div>
+          </header>
+          <main className="flex-1 p-6 overflow-auto">
 
-            <div className="flex gap-4 items-center justify-between">
-              <div className="flex gap-2 items-center">
-                <Filter className="h-5 w-5 text-muted-foreground" />
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder={t.filter} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t.all}</SelectItem>
-                    <SelectItem value="create">{t.create}</SelectItem>
-                    <SelectItem value="update">{t.update}</SelectItem>
-                    <SelectItem value="delete">{t.delete}</SelectItem>
-                    <SelectItem value="view">{t.view}</SelectItem>
-                    <SelectItem value="login">{t.login}</SelectItem>
-                    <SelectItem value="logout">{t.logout}</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <Bell className="h-8 w-8 text-primary" />
+                <div>
+                  <h1 className="text-3xl font-bold">{t.title}</h1>
+                  <p className="text-muted-foreground">{t.subtitle}</p>
+                </div>
               </div>
 
-              <Button onClick={handleDownloadLogs} variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                {t.download}
-              </Button>
-            </div>
+              <div className="flex gap-4 items-center justify-between">
+                <div className="flex gap-2 items-center">
+                  <Filter className="h-5 w-5 text-muted-foreground" />
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder={t.filter} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.all}</SelectItem>
+                      <SelectItem value="create">{t.create}</SelectItem>
+                      <SelectItem value="update">{t.update}</SelectItem>
+                      <SelectItem value="delete">{t.delete}</SelectItem>
+                      <SelectItem value="view">{t.view}</SelectItem>
+                      <SelectItem value="login">{t.login}</SelectItem>
+                      <SelectItem value="logout">{t.logout}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-primary hover:bg-primary">
-                    <TableHead className="text-primary-foreground">{t.action}</TableHead>
-                    <TableHead className="text-primary-foreground">{t.description}</TableHead>
-                    <TableHead className="text-primary-foreground">{t.type}</TableHead>
-                    <TableHead className="text-primary-foreground">{t.time}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
-                        Loading...
-                      </TableCell>
+                <Button onClick={handleDownloadLogs} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  {t.download}
+                </Button>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="text-primary-foreground">{t.action}</TableHead>
+                      <TableHead className="text-primary-foreground">{t.description}</TableHead>
+                      <TableHead className="text-primary-foreground">{t.type}</TableHead>
+                      <TableHead className="text-primary-foreground">{t.time}</TableHead>
                     </TableRow>
-                  ) : filteredLogs.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                        {t.noLogs}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell>
-                          <Badge variant={getActionBadgeVariant(log.action_type)}>
-                            {log.action_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{log.action_description}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {log.entity_type || "N/A"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDateTime(log.created_at)}
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8">
+                          Loading...
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : filteredLogs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          {t.noLogs}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell>
+                            <Badge variant={getActionBadgeVariant(log.action_type)}>
+                              {log.action_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{log.action_description}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {log.entity_type || "N/A"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDateTime(log.created_at)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );

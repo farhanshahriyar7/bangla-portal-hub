@@ -263,9 +263,13 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       return;
     }
 
-    // General Information page
     if (section === "general-information") {
       navigate("/general-information");
+      return;
+    }
+
+    if (section === "notifications") {
+      navigate("/notifications");
       return;
     }
 
