@@ -560,7 +560,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                       <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">
                         {language === 'bn' ? 'জেলা' : 'District'}
                       </TableHead>
-                      <TableHead className="text-primary-foreground font-semibold text-center text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">
+                      <TableHead className="text-primary-foreground font-semibold text-center text-xs border-r-[1.25px] border-green-700 dark:border-green-600">
                         {language === 'bn' ? 'কার্যক্রম' : 'Actions'}
                       </TableHead>
                     </TableRow>
@@ -588,12 +588,12 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                               id={`select-${record.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium">{profile?.full_name || '-'}</TableCell>
-                          <TableCell>{record.father_name || '-'}</TableCell>
-                          <TableCell>{record.mother_name || '-'}</TableCell>
-                          <TableCell>{record.blood_group || '-'}</TableCell>
-                          <TableCell>{profile?.district || '-'}</TableCell>
-                          <TableCell>
+                          <TableCell className="py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700">{profile?.full_name || '-'}</TableCell>
+                          <TableCell className='py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700'>{record.father_name || '-'}</TableCell>
+                          <TableCell className='py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700'>{record.mother_name || '-'}</TableCell>
+                          <TableCell className='py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700'>{record.blood_group || '-'}</TableCell>
+                          <TableCell className='py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700'>{profile?.district || '-'}</TableCell>
+                          <TableCell className='py-0.5 px-2 text-xs text-left border-b-[1px] border-r-[1.25px] border-gray-200 dark:border-gray-700'>
                             <div className="flex items-center justify-center gap-2">
                               <Button
                                 variant="ghost"
