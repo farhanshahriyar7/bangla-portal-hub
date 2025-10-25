@@ -15,6 +15,7 @@ import Register from "./pages/Register";
 import PendingApproval from "./pages/PendingApproval";
 import NotFound from "./pages/NotFound";
 import GeneralInformation from "./pages/GeneralInformation";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => {
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/office-information" element={<ProtectedRoute><OfficeInformation language={language} /></ProtectedRoute>} />
               <Route path="/general-information" element={<ProtectedRoute><GeneralInformation language={language} /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications language={language} /></ProtectedRoute>} />
               {/* <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /> */}
               <Route path="/settings" element={<ProtectedRoute><Settings language={language} /></ProtectedRoute>} />
               <Route path="/security" element={<ProtectedRoute><Security language={language} /></ProtectedRoute>} />
