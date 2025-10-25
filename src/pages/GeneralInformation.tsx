@@ -568,13 +568,13 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-2 text-muted-foreground">
                           {language === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
                         </TableCell>
                       </TableRow>
                     ) : generalInfoList.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-2 text-muted-foreground">
                           {language === 'bn' ? 'কোন তথ্য পাওয়া যায়নি' : 'No records found'}
                         </TableCell>
                       </TableRow>

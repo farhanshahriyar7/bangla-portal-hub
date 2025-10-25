@@ -17,6 +17,15 @@ ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON public.activity_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.activity_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_action_type ON public.activity_logs(action_type);
+ 
+-- Ensure `app_role` enum exists (create if missing) so policies that cast to it don't fail
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'app_role') THEN
+        CREATE TYPE app_role AS ENUM ('admin', 'user', 'pending');
+    END IF;
+END
+$$;
 
 -- RLS Policies
 CREATE POLICY "Users can view their own activity logs"
