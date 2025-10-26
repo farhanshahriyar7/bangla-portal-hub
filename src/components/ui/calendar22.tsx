@@ -101,7 +101,13 @@ export function Calendar22({ value, onChange, label, id }: Calendar22Props) {
               selected={date}
               month={viewMonth}
               onSelect={(d) => {
-                onChange?.(d)
+                if (d) {
+                  // Create a new date at noon to avoid timezone issues
+                  const correctedDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0)
+                  onChange?.(correctedDate)
+                } else {
+                  onChange?.(d)
+                }
                 setOpen(false)
               }}
             />
