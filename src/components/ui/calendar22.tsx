@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ChevronDownIcon } from "lucide-react"
+import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -59,7 +60,7 @@ export function Calendar22({ value, onChange, label, id }: Calendar22Props) {
             id={id ?? 'date'}
             className="w-48 justify-between font-normal"
           >
-            {date ? date.toLocaleDateString() : "Select date"}
+            {date ? format(date, "MM/dd/yyyy") : "Select date"}
             <ChevronDownIcon />
           </Button>
         </PopoverTrigger>
