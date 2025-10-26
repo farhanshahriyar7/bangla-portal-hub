@@ -13,7 +13,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CopyRights } from '@/components/CopyRights';
 import { Menu, Bell, Edit, Download, Eye, Plus } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Database } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
@@ -441,8 +441,12 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
           const cellValue = String(cell.v);
           const fontName = isBangla(cellValue) ? 'SutonnyOMJ' : 'Times New Roman';
           
-          if (!cell.s) cell.s = {};
-          cell.s.font = { name: fontName, sz: 11 };
+          cell.s = {
+            font: { 
+              name: fontName, 
+              sz: 11 
+            }
+          };
         }
       }
     }
