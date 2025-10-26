@@ -70,15 +70,15 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
-    /* Modern Slate Sidebar */
-    --sidebar-background: 220 30% 16%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 150 60% 45%;
+    /* Modern Navy Sidebar */
+    --sidebar-background: 215 25% 15%;
+    --sidebar-foreground: 210 30% 96%;
+    --sidebar-primary: 180 85% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 22%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 220 30% 24%;
-    --sidebar-ring: 150 60% 45%;
+    --sidebar-accent: 215 22% 20%;
+    --sidebar-accent-foreground: 210 30% 96%;
+    --sidebar-border: 215 25% 22%;
+    --sidebar-ring: 180 85% 45%;
   }
 
   .dark {
@@ -127,15 +127,15 @@ All colors MUST be HSL.
     /* Dark Shadows */
     --shadow-card: 0 4px 15px -3px hsl(0 0% 0% / 0.3);
     --shadow-form: 0 8px 25px -5px hsl(0 0% 0% / 0.4);
-    /* Dark Mode Modern Sidebar */
-    --sidebar-background: 220 35% 12%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 210 100% 58%;
+    /* Dark Mode Navy Sidebar */
+    --sidebar-background: 215 30% 10%;
+    --sidebar-foreground: 210 30% 96%;
+    --sidebar-primary: 180 90% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 30% 18%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 220 30% 20%;
-    --sidebar-ring: 210 100% 58%;
+    --sidebar-accent: 215 25% 14%;
+    --sidebar-accent-foreground: 210 30% 96%;
+    --sidebar-border: 215 25% 16%;
+    --sidebar-ring: 180 90% 50%;
   }
 }
 
