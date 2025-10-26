@@ -399,31 +399,54 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
   // Navigation handler similar to OfficeInformation
   const handleDownloadXLSX = () => {
+    // Helper function to detect if text contains Bangla characters
+    const isBangla = (text: string) => {
+      return /[\u0980-\u09FF]/.test(text);
+    };
+
     const exportData = generalInfoList.map((record) => ({
       [language === 'bn' ? 'পূর্ণ নাম' : 'Full Name']: profile?.full_name || '',
-      [language === 'bn' ? 'জন্ম তারিখ' : 'Date of Birth']: profile?.date_of_birth || '', // added date of birth
+      [language === 'bn' ? 'জন্ম তারিখ' : 'Date of Birth']: profile?.date_of_birth || '',
       [language === 'bn' ? 'পিতার নাম' : "Father's Name"]: record.father_name || '',
       [language === 'bn' ? 'মাতার নাম' : "Mother's Name"]: record.mother_name || '',
-      [language === 'bn' ? 'স্থায়ী ঠিকানা' : 'Permanent Address']: profile?.address_line1 || '', // added address_line1
+      [language === 'bn' ? 'স্থায়ী ঠিকানা' : 'Permanent Address']: profile?.address_line1 || '',
       [language === 'bn' ? 'বর্তমান ঠিকানা' : 'Current Address']: record.current_address || '',
-      [language === 'bn' ? 'নিজ জেলা' : 'District']: profile?.district || '', // added district
-      [language === 'bn' ? 'সরকারী চাকরিতে যোগদানের তারিখ' : 'Joining Date']: profile?.joining_date || '', // added joining date
+      [language === 'bn' ? 'নিজ জেলা' : 'District']: profile?.district || '',
+      [language === 'bn' ? 'সরকারী চাকরিতে যোগদানের তারিখ' : 'Joining Date']: profile?.joining_date || '',
       [language === 'bn' ? 'বর্তমান পদে যোগদানের তারিখ' : 'Current Position Joining Date']: record.current_position_joining_date || '',
-      [language === 'bn' ? 'বর্তমান পদবী' : 'Designation']: profile?.designation || '', // added designation
+      [language === 'bn' ? 'বর্তমান পদবী' : 'Designation']: profile?.designation || '',
       [language === 'bn' ? 'কর্মস্থলের ঠিকানা' : 'Workplace Address']: record.workplace_address || '',
       [language === 'bn' ? 'কর্মস্থলের ফোন' : 'Workplace Phone']: record.workplace_phone || '',
       [language === 'bn' ? 'অফিসের ঠিকানা' : 'Office Address']: record.office_address || '',
       [language === 'bn' ? 'চাকরি স্থায়ীকরণের সরকারী আদেশ নং' : 'Confirmation Order No.']: record.confirmation_order_number || '',
       [language === 'bn' ? 'চাকরি স্থায়ীকরণের সরকারী আদেশ তারিখ' : 'Confirmation Order Date']: record.confirmation_order_date || '',
       [language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group']: record.blood_group || '',
-      [language === 'bn' ? 'ফোন' : 'Phone']: profile?.phone || '', // added phone
+      [language === 'bn' ? 'ফোন' : 'Phone']: profile?.phone || '',
       [language === 'bn' ? 'মোবাইল ফোন' : 'Mobile Phone']: record.mobile_phone || '',
-      [language === 'bn' ? 'ই-মেইল' : 'Email']: profile?.email || '', // added email
+      [language === 'bn' ? 'ই-মেইল' : 'Email']: profile?.email || '',
       [language === 'bn' ? 'বিশেষ ক্ষেত্রে' : 'Special Case']: record.special_case ? (language === 'bn' ? 'হ্যাঁ' : 'Yes') : (language === 'bn' ? 'না' : 'No'),
       [language === 'bn' ? 'বিশেষ রোগের তথ্য' : 'Special Illness Info']: record.special_illness_info || '',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
+    
+    // Apply fonts to cells based on content
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = worksheet[cellAddress];
+        
+        if (cell && cell.v) {
+          const cellValue = String(cell.v);
+          const fontName = isBangla(cellValue) ? 'SutonnyOMJ' : 'Times New Roman';
+          
+          if (!cell.s) cell.s = {};
+          cell.s.font = { name: fontName, sz: 11 };
+        }
+      }
+    }
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, language === 'bn' ? 'সাধারণ তথ্য' : 'General Information');
     XLSX.writeFile(workbook, `general_information_${new Date().toISOString().split('T')[0]}.xlsx`);
