@@ -7,6 +7,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { WelcomeHeader } from "@/components/WelcomeHeader";
 import { Bell, Filter, Download, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Breadcrumbs from "@/components/ui/breadcrumb";
 import {
   Table,
   TableBody,
@@ -251,6 +252,7 @@ const Notifications = ({ language }: { language: "en" | "bn" }) => {
               <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
                 <Menu className="h-4 w-4" />
               </SidebarTrigger>
+              <Breadcrumbs items={[{ label: language === 'bn' ? 'কার্যক্রম লগ' : 'Activity Logs' }]} />
 
               <div className="flex-1" />
 

@@ -10,6 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CopyRights } from '@/components/CopyRights';
 import { Menu, Bell, Edit, Download, Eye, Plus } from 'lucide-react';
@@ -17,6 +25,8 @@ import * as XLSX from 'xlsx-js-style';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Database } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
+
+import Breadcrumbs from "@/components/ui/breadcrumb";
 
 interface GeneralInformationProps {
   language?: 'bn' | 'en';
@@ -60,6 +70,8 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   const [language, setLanguage] = useState<'bn' | 'en'>(initialLanguage);
   const [loading, setLoading] = useState(true);
   const { signOut } = useAuth();
+
+
 
   // profile (auto-filled) state and edit toggle
   const [profile, setProfile] = useState<ProfileRow | null>(null);
@@ -429,22 +441,22 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
-    
+
     // Apply fonts to cells based on content
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         const cell = worksheet[cellAddress];
-        
+
         if (cell && cell.v) {
           const cellValue = String(cell.v);
           const fontName = isBangla(cellValue) ? 'SutonnyOMJ' : 'Times New Roman';
-          
+
           cell.s = {
-            font: { 
-              name: fontName, 
-              sz: 12 
+            font: {
+              name: fontName,
+              sz: 12
             }
           };
         }
@@ -513,6 +525,9 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
               <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
                 <Menu className="h-4 w-4" />
               </SidebarTrigger>
+              <div className='flex items-center gap-1.5'>
+                <Breadcrumbs items={[{ label: language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information' }]} />
+              </div>
 
               <div className="flex-1" />
 
@@ -532,6 +547,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">{language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information'}</h1>
+
                   <p className="text-muted-foreground mt-1">{language === 'bn' ? 'অনুগ্রহ করে আপনার তথ্য যাচাই ও সম্পূর্ণ করুন' : 'Please verify and complete your information'}</p>
                 </div>
                 <div className="flex gap-2">

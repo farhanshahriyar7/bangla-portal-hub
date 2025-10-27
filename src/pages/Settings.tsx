@@ -15,6 +15,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { CopyRights } from "@/components/CopyRights";
 
+import Breadcrumbs from "@/components/ui/breadcrumb";
+
 interface SettingsProps {
   language: 'bn' | 'en';
 }
@@ -245,6 +247,7 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
               <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
                 <Menu className="h-4 w-4" />
               </SidebarTrigger>
+              <Breadcrumbs items={[{ label: language === 'bn' ? 'সেটিংস' : 'Settings' }]} />
 
               <div className="flex-1" />
 

@@ -1,3 +1,38 @@
+import { Link } from "react-router-dom";
+
+interface BreadcrumbItem {
+  label: string;
+  to?: string;
+}
+
+export default function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
+  return (
+    <nav aria-label="Breadcrumb" className="text-sm">
+      <ol className="flex items-center gap-2 text-muted-foreground">
+        <li>
+          <Link to="/" className="hover:underline text-sm text-muted-foreground">
+            Dashboard
+          </Link>
+        </li>
+        {items.map((it, idx) => {
+          const isLast = idx === items.length - 1;
+          return (
+            <li key={idx} className="flex items-center">
+              <span className="mx-2 text-muted-foreground">/</span>
+              {it.to ? (
+                <Link to={it.to} className={`hover:underline text-sm ${isLast ? 'text-muted-foreground' : 'text-primary'}`} aria-current={isLast ? 'page' : undefined}>
+                  {it.label}
+                </Link>
+              ) : (
+                <span className="text-sm text-muted-foreground" aria-current={isLast ? 'page' : undefined}>{it.label}</span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { ChevronRight, MoreHorizontal } from "lucide-react";

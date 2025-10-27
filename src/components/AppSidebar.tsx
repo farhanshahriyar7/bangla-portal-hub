@@ -223,7 +223,7 @@ export function AppSidebar({
             {language === 'bn' ? 'গেজেটেড সরকারি কর্মচারীগণ' : 'Gazetted Govt. Employees'}
           </p>
           <p className="text-xs text-muted-foreground truncate">
-            {/* soon it gonna be used for admin */}
+            Employeer View
           </p>
         </div>
       </div> : <div className="flex justify-center">
@@ -238,7 +238,7 @@ export function AppSidebar({
       {/* Main Menu */}
       <SidebarGroup className="mx-0 px-0">
         <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
-          {language === 'bn' ? 'প্রধান মেনু' : 'Main Menu'}
+          <p className="text-base font-medium">{language === 'bn' ? 'প্রধান মেনু' : 'Main Menu'}</p>
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu className="space-y-1">
@@ -262,7 +262,7 @@ export function AppSidebar({
       <SidebarGroup className="px-0">
         <Collapsible open={toolsOpen} onOpenChange={setToolsOpen}>
           <SidebarGroupLabel className={collapsed ? "sr-only" : "flex items-center justify-between"}>
-            <span>{language === 'bn' ? 'সরঞ্জাম' : 'Tools'}</span>
+            <p className="text-base font-medium">{language === 'bn' ? 'সরঞ্জাম' : 'Tools'}</p>
             {!collapsed && (
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
@@ -296,7 +296,9 @@ export function AppSidebar({
       {/* Settings */}
       <SidebarGroup className="px-0">
         <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
-          {language === 'bn' ? 'সেটিংস' : 'Settings'}
+          <p className="text-base font-medium">
+            {language === 'bn' ? 'সেটিংস' : 'Settings'}
+          </p>
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu className="space-y-1">
@@ -322,7 +324,7 @@ export function AppSidebar({
       {!collapsed ? <div className="space-y-2">
         {/* User Profile */}
         <div className="flex items-center gap-3 p-2 rounded-lg transition-colors">
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-10 w-10">
             {avatarUrl ? (
               <AvatarImage src={avatarUrl} />
             ) : (

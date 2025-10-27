@@ -16,6 +16,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+import Breadcrumbs from "@/components/ui/breadcrumb";
+
 interface SecurityProps {
   language?: 'bn' | 'en';
 }
@@ -427,7 +429,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
     if (!event.target.files || !event.target.files[0] || !user) return;
 
     const file = event.target.files[0];
-    
+
     // Validate file
     const validation = await validatePhotoFile(file);
     if (!validation.valid) {
@@ -512,7 +514,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
     if (!event.target.files || !event.target.files[0] || !user) return;
 
     const file = event.target.files[0];
-    
+
     // Validate file
     const validation = await validateDocumentFile(file);
     if (!validation.valid) {
@@ -523,7 +525,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
       });
       return;
     }
-    
+
     setUploadingIdProof(true);
 
     try {
@@ -607,7 +609,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
       try {
         const u = new URL(url);
         const parts = u.pathname.split('/').filter(Boolean);
-        const idx = parts.indexOf('object') ;
+        const idx = parts.indexOf('object');
         if (idx >= 0) {
           // path like /storage/v1/object/public/<bucket>/<path...>
           // we expect bucket at idx+2
@@ -662,6 +664,9 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
               <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
                 <Menu className="h-4 w-4" />
               </SidebarTrigger>
+              <div className='flex items-center gap-1.5'>
+                <Breadcrumbs items={[{ label: language === 'bn' ? 'নিরাপত্তা' : 'Security'}]} />
+              </div>
 
               <div className="flex-1" />
 
@@ -851,10 +856,10 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                       <div className="flex items-start gap-4">
                         {detectFileType(resolvedIdProofUrl || profileData.id_proof_url) === 'image' ? (
                           <div className="relative">
-                            <img 
-                              src={resolvedIdProofUrl || profileData.id_proof_url} 
-                              alt="id-proof" 
-                              className="h-20 w-20 object-cover rounded border-2 border-border" 
+                            <img
+                              src={resolvedIdProofUrl || profileData.id_proof_url}
+                              alt="id-proof"
+                              className="h-20 w-20 object-cover rounded border-2 border-border"
                             />
                             <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                               {language === 'bn' ? 'ছবি' : 'Image'}
@@ -884,11 +889,11 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
                             <p className="text-xs text-muted-foreground">
                               {language === 'bn' ? 'ধরণ: ' : 'Type: '}
                               <span className="font-medium">
-                                {detectFileType(profileData.id_proof_url) === 'image' 
+                                {detectFileType(profileData.id_proof_url) === 'image'
                                   ? (language === 'bn' ? 'ছবি ফাইল' : 'Image File')
                                   : detectFileType(profileData.id_proof_url) === 'pdf'
-                                  ? 'PDF Document'
-                                  : (language === 'bn' ? 'ডকুমেন্ট ফাইল' : 'Document File')}
+                                    ? 'PDF Document'
+                                    : (language === 'bn' ? 'ডকুমেন্ট ফাইল' : 'Document File')}
                               </span>
                             </p>
                           </div>

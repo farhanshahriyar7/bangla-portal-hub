@@ -51,6 +51,8 @@ interface OfficeInfoData {
   updated_at?: string;
 }
 
+import Breadcrumbs from "@/components/ui/breadcrumb";
+
 interface OfficeInformationProps {
   language: 'bn' | 'en';
 }
@@ -537,6 +539,9 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
               <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
                 <Menu className="h-4 w-4" />
               </SidebarTrigger>
+              <div className='flex items-center gap-1.5'>
+                <Breadcrumbs items={[{ label: language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information' }]} />
+              </div>
 
               <div className="flex-1" />
 
@@ -567,6 +572,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">
                     {language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information'}
+
                   </h1>
                   <p className="text-muted-foreground mt-1">
                     {language === 'bn'
