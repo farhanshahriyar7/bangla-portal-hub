@@ -270,7 +270,7 @@ const Notifications = ({ language }: { language: "en" | "bn" }) => {
               <div className="flex items-center gap-3">
                 <Bell className="h-8 w-8 text-primary" />
                 <div>
-                  <h1 className="text-3xl font-bold">{t.title}</h1>
+                  <h1 className="text-2xl font-bold">{t.title}</h1>
                   <p className="text-muted-foreground">{t.subtitle}</p>
                 </div>
               </div>

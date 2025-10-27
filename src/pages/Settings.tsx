@@ -270,7 +270,7 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
           <main className="flex-1 p-6">
             <div className="container mx-auto py-6 px-4 max-w-4xl">
               <div className="mb-6">
-                <h1 className="text-3xl font-bold">
+                <h1 className="text-2xl font-bold">
                   {language === 'bn' ? 'সেটিংস' : 'Settings'}
                 </h1>
                 <p className="text-muted-foreground">

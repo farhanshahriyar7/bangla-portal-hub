@@ -444,7 +444,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
           cell.s = {
             font: { 
               name: fontName, 
-              sz: 11 
+              sz: 12 
             }
           };
         }
@@ -531,7 +531,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
             <div className="max-w-7xl mx-auto space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold text-foreground">{language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information'}</h1>
+                  <h1 className="text-2xl font-bold text-foreground">{language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information'}</h1>
                   <p className="text-muted-foreground mt-1">{language === 'bn' ? 'অনুগ্রহ করে আপনার তথ্য যাচাই ও সম্পূর্ণ করুন' : 'Please verify and complete your information'}</p>
                 </div>
                 <div className="flex gap-2">

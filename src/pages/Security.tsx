@@ -688,7 +688,7 @@ const Security = ({ language: initialLanguage = 'bn' }: SecurityProps) => {
           <main className="flex-1 p-6 overflow-auto">
             <div className="max-w-4xl mx-auto space-y-6">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">
+                <h1 className="text-2xl font-bold text-foreground">
                   {language === 'bn' ? 'নিরাপত্তা' : 'Security'}
                 </h1>
                 <p className="text-muted-foreground mt-2">
