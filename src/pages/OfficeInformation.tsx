@@ -485,10 +485,39 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       [headers[8]]: d.status,
     }));
 
-    // Try dynamic import of xlsx
+    // Try dynamic import of xlsx-js-style so we can apply font styling per cell
     try {
-      const XLSX = await import('xlsx');
+      const XLSX = await import('xlsx-js-style');
+
+      // helper to detect Bangla characters
+      const isBangla = (text: string) => /[\u0980-\u09FF]/.test(String(text || ''));
+
       const worksheet = XLSX.utils.json_to_sheet(rows);
+
+      // Apply font styling for each cell: Bangla -> SutonnyOMJ, English -> Times New Roman, size 12
+      if (worksheet && worksheet['!ref']) {
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const address = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = worksheet[address];
+            if (!cell) continue;
+
+            const text = String(cell.v ?? '');
+            const fontName = isBangla(text) ? 'SutonnyOMJ' : 'Times New Roman';
+
+            // ensure style object exists and set font
+            cell.s = cell.s || {};
+            cell.s.font = { name: fontName, sz: 12 };
+
+            // make header row bold
+            if (R === range.s.r) {
+              cell.s.font = { ...cell.s.font, bold: true };
+            }
+          }
+        }
+      }
+
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'OfficeInformation');
       const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });

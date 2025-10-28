@@ -442,24 +442,20 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
 
-    // Apply fonts to cells based on content
+    // Apply fonts to cells based on content and make the header row bold
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         const cell = worksheet[cellAddress];
+        if (!cell) continue;
 
-        if (cell && cell.v) {
-          const cellValue = String(cell.v);
-          const fontName = isBangla(cellValue) ? 'SutonnyOMJ' : 'Times New Roman';
+        const cellValue = String(cell.v ?? '');
+        const fontName = isBangla(cellValue) ? 'SutonnyOMJ' : 'Times New Roman';
 
-          cell.s = {
-            font: {
-              name: fontName,
-              sz: 12
-            }
-          };
-        }
+        // Preserve any existing style object and set font (size 12)
+        cell.s = cell.s || {};
+        cell.s.font = { name: fontName, sz: 12, ...(R === range.s.r ? { bold: true } : {}) };
       }
     }
 
