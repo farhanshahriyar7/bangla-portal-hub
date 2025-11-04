@@ -10,8 +10,17 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [checkingVerification, setCheckingVerification] = useState(true);
 
   useEffect(() => {
+    // Always start by checking 
+    setCheckingVerification(true);
+    if (loading) {
+      // keep checkingVerification true while auth is loading
+      return;
+    }
+
+    // if there is no user, no need to check verification
     if (!user) {
       setCheckingVerification(false);
+      setIsVerified(false);
       return;
     }
 
@@ -27,7 +36,8 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           console.error('Error checking verification:', error);
           setIsVerified(false);
         } else {
-          setIsVerified(data?.is_verified || false);
+          // setIsVerified(data?.is_verified || false);
+          setIsVerified(Boolean(data?.is_verified)); // ensure it's a boolean
         }
       } catch (error) {
         console.error('Error:', error);
@@ -37,8 +47,10 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
+    // start the verification check
+    setCheckingVerification(true);
     checkVerification();
-  }, [user]);
+  }, [user, loading]);
 
   if (loading || checkingVerification) {
     return (

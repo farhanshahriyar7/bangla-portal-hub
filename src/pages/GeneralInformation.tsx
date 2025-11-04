@@ -5,6 +5,7 @@ import { ToastAction } from '@/components/ui/toast';
 import type { ToastActionElement } from '@/components/ui/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
+import Calendar22 from '@/components/ui/calendar22';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -199,6 +200,17 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   const handleProfileDraftChange = (key: keyof ProfileRow, value: string | null | undefined) => {
     setProfileDraft((p) => ({ ...p, [key]: value }));
 
+  };
+
+  const parseDateStringToDate = (s?: string | null) => {
+    if (!s) return undefined;
+    // create date at noon to avoid timezone shifts
+    return new Date(`${s}T12:00:00`);
+  };
+
+  const formatDateToString = (d?: Date | null) => {
+    if (!d) return null;
+    return d.toISOString().split('T')[0];
   };
 
   const handleGeneralChange = (key: keyof GeneralInfoRow, value: string | null | undefined) => {
@@ -781,13 +793,31 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                           return (
                             <div className="space-y-2" key={String(f.key)}>
                               <Label htmlFor={`auto-${String(f.key)}`}>{language === 'bn' ? f.labelBn : f.labelEn}</Label>
-                              <Input
-                                id={`auto-${String(f.key)}`}
-                                type={inputType}
-                                value={String(value)}
-                                onChange={(e) => handleProfileDraftChange(f.key, e.target.value)}
-                                readOnly={!editProfileFields}
-                              />
+                              {inputType === 'date' ? (
+                                // Use Calendar22 when profile is editable; otherwise show read-only Input
+                                editProfileFields ? (
+                                  <Calendar22
+                                    id={`auto-${String(f.key)}`}
+                                    value={parseDateStringToDate(value)}
+                                    onChange={(d) => handleProfileDraftChange(f.key, formatDateToString(d) ?? null)}
+                                  />
+                                ) : (
+                                  <Input
+                                    id={`auto-${String(f.key)}`}
+                                    type="text"
+                                    value={String(value ?? '')}
+                                    readOnly
+                                  />
+                                )
+                              ) : (
+                                <Input
+                                  id={`auto-${String(f.key)}`}
+                                  type={inputType}
+                                  value={String(value)}
+                                  onChange={(e) => handleProfileDraftChange(f.key, e.target.value)}
+                                  readOnly={!editProfileFields}
+                                />
+                              )}
                             </div>
                           );
                         })}
@@ -820,6 +850,12 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                   ))}
                                 </select>
+                              ) : f.type === 'date' ? (
+                                <Calendar22
+                                  id={`gen-${String(f.key)}`}
+                                  value={parseDateStringToDate(String(val ?? ''))}
+                                  onChange={(d) => handleGeneralChange(f.key, formatDateToString(d))}
+                                />
                               ) : (
                                 <Input
                                   id={`gen-${String(f.key)}`}
@@ -1013,7 +1049,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
             }
           }} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {missingGeneralFields.map((f) => {
+                    {missingGeneralFields.map((f) => {
                 const editVal = (formData as Partial<GeneralInfoRow>)[f.key];
                 return (
                   <div className="space-y-2" key={String(f.key)}>
@@ -1030,6 +1066,12 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                       </select>
+                    ) : f.type === 'date' ? (
+                      <Calendar22
+                        id={`edit-${String(f.key)}`}
+                        value={parseDateStringToDate(String(editVal ?? ''))}
+                        onChange={(d) => handleFormChange(f.key, formatDateToString(d) ?? null)}
+                      />
                     ) : (
                       <Input
                         id={`edit-${String(f.key)}`}
