@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import type { ToastActionElement } from '@/components/ui/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,14 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CopyRights } from '@/components/CopyRights';
 import { Menu, Bell, Edit, Download, Eye, Plus } from 'lucide-react';
@@ -65,7 +59,7 @@ interface GeneralInfoRow {
 }
 
 export default function GeneralInformation({ language: initialLanguage = 'bn' }: GeneralInformationProps) {
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const navigate = useNavigate();
   const [language, setLanguage] = useState<'bn' | 'en'>(initialLanguage);
   const [loading, setLoading] = useState(true);
@@ -90,6 +84,10 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
   const [formData, setFormData] = useState<Partial<GeneralInfoRow>>({});
   // Selection state for table rows
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Map of id -> timeout so we can undo scheduled deletes (persist across renders)
+  const pendingDeletesRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+
 
   // Fetch profile + general information for the logged-in user
   const fetchData = async () => {
@@ -268,30 +266,121 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
 
   // Perform deletion after user confirms in-modal
   const performDeleteConfirmed = async () => {
+    // We schedule deletes to allow undo within a short window (15s)
     if (!deleteMode) return;
     try {
       setLoading(true);
+
       if (deleteMode === 'selected') {
-        const { error } = await supabase.from('general_information').delete().in('id', selectedIds);
-        if (error) throw error;
-        toast({ title: language === 'bn' ? 'সফল' : 'Success', description: language === 'bn' ? 'নির্বাচিত তথ্য মুছে ফেলা হয়েছে' : 'Selected items deleted' });
+        // schedule delete for selected ids
+        scheduleDelete(selectedIds);
         setSelectedIds([]);
       } else {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Unauthenticated');
-        const { error } = await supabase.from('general_information').delete().eq('user_id', user.id);
-        if (error) throw error;
-        toast({ title: language === 'bn' ? 'সফল' : 'Success', description: language === 'bn' ? 'সব তথ্য মুছে ফেলা হয়েছে' : 'All records deleted' });
-        setSelectedIds([]);
+        // delete all: schedule by collecting all ids
+        const ids = generalInfoList.map((r) => r.id!).filter(Boolean) as string[];
+        if (ids.length === 0) {
+          toast({ title: language === 'bn' ? 'কোনও ডেটা নাই' : 'No data', description: language === 'bn' ? 'মুছার জন্য কোন তথ্য নেই' : 'No data to delete', variant: 'destructive' });
+        } else {
+          scheduleDelete(ids);
+        }
       }
-      await fetchData();
+
+      // UI handled optimistically by scheduleDelete; just close dialog
+      setDeleteConfirmOpen(false);
+      setDeleteMode(null);
     } catch (err) {
-      console.error('Delete error:', err);
+      console.error('Delete scheduling error:', err);
       toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'মুছতে ব্যর্থ হয়েছে' : 'Failed to delete', variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // perform actual backend deletion. If silent is true, don't show an additional toast
+  const performDeleteByIds = async (ids: string[], silent = false) => {
+    try {
+      const { error } = await supabase
+        .from('general_information')
+        .delete()
+        .in('id', ids as string[]);
+
+      if (error) throw error;
+
+      await fetchData();
+      setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
       setDeleteConfirmOpen(false);
-      setDeleteMode(null);
+
+      if (!silent) {
+        toast({
+          title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
+          description: language === 'bn' ? (ids.length > 1 ? 'নির্বাচিত আইটেমগুলো মুছে ফেলা হয়েছে' : 'আইটেম মুছে ফেলা হয়েছে') : (ids.length > 1 ? 'Selected items were deleted' : 'Item was deleted'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting general information:', error);
+      toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'মুছতে ব্যর্থ হয়েছে' : 'Failed to delete items', variant: 'destructive' });
+    }
+  };
+
+  // Schedule delete with undo window (15 seconds). Removes items from UI optimistically and shows undo toast.
+  const scheduleDelete = (ids: string[]) => {
+    // Optimistically remove from UI
+    setGeneralInfoList((prev) => prev.filter((r) => !ids.includes(r.id!)));
+    setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+
+    // For each id, create a timeout that will call performDeleteByIds after delay
+    const delay = 15000; // 15 seconds undo window
+
+    ids.forEach((id) => {
+      const pendingDeletes = pendingDeletesRef.current;
+      if (pendingDeletes.has(id)) {
+        clearTimeout(pendingDeletes.get(id)!);
+        pendingDeletes.delete(id);
+      }
+
+      const timeout = setTimeout(() => {
+        // when timeout fires, perform backend delete for this id
+        performDeleteByIds([id], true).catch((e) => console.error(e));
+        pendingDeletes.delete(id);
+      }, delay);
+
+      pendingDeletes.set(id, timeout);
+    });
+
+    // Show toast with Undo action
+    const toastInstance = toast({
+      title: language === 'bn' ? 'আইটেম মুছে ফেলা হচ্ছে' : 'Item(s) scheduled for deletion',
+      description: language === 'bn' ? 'আপনি 15 সেকেন্ডের মধ্যে পূর্বাবস্থায় ফেরাতে পারবেন।' : 'You can undo within 15 seconds.',
+      action: (
+        <ToastAction altText={language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'} onClick={() => {
+          // Undo all ids in this batch
+          ids.forEach((id) => undoDelete(id));
+          // dismiss all toasts
+          dismiss();
+        }}>
+          {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
+        </ToastAction>
+      ) as ToastActionElement,
+      variant: 'destructive',
+    });
+  };
+
+  const undoDelete = (id: string) => {
+    const pendingDeletes = pendingDeletesRef.current;
+    const timeout = pendingDeletes.get(id);
+    if (timeout) {
+      clearTimeout(timeout);
+      pendingDeletes.delete(id);
+
+      // Re-fetch the deleted item from backend to restore it in the UI
+      // Instead of fetching single, just refetch all data to keep it simple
+      fetchData();
+
+      toast({
+        title: language === 'bn' ? 'পূর্বাবস্থায় ফিরেছে' : 'Restored',
+        description: language === 'bn' ? 'আইটেমটি পূর্বাবস্থায় ফেরানো হয়েছে' : 'Item restored',
+      });
     }
   };
 

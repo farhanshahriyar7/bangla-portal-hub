@@ -388,20 +388,21 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       console.error('Error deleting office information:', error);
       toast({
         title: language === 'bn' ? 'ত্রুটি' : 'Error',
+        
         description: language === 'bn' ? 'মুছতে ব্যর্থ হয়েছে' : 'Failed to delete items',
         variant: 'destructive',
       });
     }
   };
 
-  // Schedule delete with undo window (8 seconds). Removes items from UI optimistically and shows undo toast.
+  // Schedule delete with undo window (15 seconds). Removes items from UI optimistically and shows undo toast.
   const scheduleDelete = (ids: string[]) => {
     // Optimistically remove from UI
     setData((prev) => prev.filter((d) => !ids.includes(d.id)));
     setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
 
     // For each id, create a timeout that will call performDeleteByIds after delay
-    const delay = 8000; // 8 seconds undo window
+    const delay = 15000; // 5 seconds undo window
 
     ids.forEach((id) => {
       const pendingDeletes = pendingDeletesRef.current;
@@ -424,8 +425,8 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       title: language === 'bn' ? 'আইটেম মুছে ফেলা হচ্ছে' : 'Item(s) scheduled for deletion',
       description:
         language === 'bn'
-          ? 'আপনি ৮ সেকেন্ডের মধ্যে পূর্বাবস্থায় ফেরাতে পারবেন।'
-          : 'You can undo within 8 seconds.',
+          ? 'আপনি 15 সেকেন্ডের মধ্যে পূর্বাবস্থায় ফেরাতে পারবেন।'
+          : 'You can undo within 15 seconds.',
       action: (
         <ToastAction altText={language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'} onClick={() => {
           // Undo all ids in this batch
