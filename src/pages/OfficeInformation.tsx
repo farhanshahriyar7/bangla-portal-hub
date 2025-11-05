@@ -270,6 +270,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       return;
     }
 
+    if (section === 'children-information') {
+      navigate('/children-information');
+      return;
+    }
+
     if (section === "notifications") {
       navigate("/notifications");
       return;

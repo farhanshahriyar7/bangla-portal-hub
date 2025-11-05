@@ -581,6 +581,11 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
       return;
     }
 
+    if (section === 'children-information') {
+      navigate('/children-information');
+      return;
+    }
+
     if (section === 'notifications') {
       navigate('/notifications');
       return;

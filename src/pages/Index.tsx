@@ -34,6 +34,7 @@ const Index = () => {
       dashboard: { bn: "ড্যাশবোর্ড", en: "Dashboard" },
       "office-information": { bn: "দাপ্তরিক তথ্য", en: "Office Information" },
       "general-information": { bn: "সাধারণ তথ্য", en: "General Information" },
+      'children-information': { bn: "সন্তানদের তথ্যাবলি", en: "Children Information" },
       documents: { bn: "নথিপত্র", en: "Documents" },
       leave: { bn: "ছুটির আবেদন", en: "Leave Application" },
       settings: { bn: "সেটিংস", en: "Settings" },
@@ -69,6 +70,12 @@ const Index = () => {
     // General Information page
     if (section === "general-information") {
       navigate("/general-information");
+      return;
+    }
+
+    // Children Information page
+    if (section === "children-information") {
+      navigate("/children-information");
       return;
     }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Home, User, FileText, Calendar, Upload, Download, Shield, Settings, Bell, LogOut, Building2, ChevronDown } from "lucide-react";
+import { Home, User, FileText, Calendar, Upload, Download, Shield, Settings, Bell, LogOut, Building2, ChevronDown, Users } from "lucide-react";
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
@@ -30,6 +30,7 @@ export function AppSidebar({
     { title: language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard', url: '/', icon: Home as IconType, section: 'dashboard' },
     { title: language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information', url: '/office-information', icon: Building2 as IconType, section: 'office-information' },
     { title: language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information', url: '/general-information', icon: User as IconType, section: 'general-information' },
+    { title: language === 'bn' ? 'সন্তানদের তথ্যাবলি' : 'Children Information', url: '/children-information', icon: Users as IconType, section: 'children-information' },
   ]);
 
   const [toolsMenuItems, setToolsMenuItems] = useState<Array<{ title: string; url: string; icon: IconType; section: string }>>([
@@ -48,6 +49,7 @@ export function AppSidebar({
     dashboard: Home,
     'office-information': Building2,
     'general-information': User,
+    'children-information': Users,
     upload: Upload,
     download: Download,
     notifications: Bell,

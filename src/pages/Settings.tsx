@@ -63,6 +63,17 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
       navigate('/general-information');
       return;
     }
+    
+        if (section === 'office-information') {
+          navigate('/office-information');
+          return;
+        }
+    
+     if (section === 'children-information') {
+      navigate('/children-information');
+      return;
+    }
+
 
     if (section === "notifications") {
       navigate("/notifications");
@@ -71,11 +82,6 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
 
     if (section === "security") {
       navigate("/security");
-      return;
-    }
-
-    if (section === 'office-information') {
-      navigate('/office-information');
       return;
     }
 
