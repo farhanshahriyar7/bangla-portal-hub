@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import GeneralInformation from "./pages/GeneralInformation";
 import Notifications from "./pages/Notifications";
 import ChildrenInformation from "./pages/ChildrenInformation";
+import UploadFiles from "./pages/UploadFiles";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => {
               <Route path="/office-information" element={<ProtectedRoute><OfficeInformation language={language} /></ProtectedRoute>} />
               <Route path="/general-information" element={<ProtectedRoute><GeneralInformation language={language} /></ProtectedRoute>} />
               <Route path="/children-information" element={<ProtectedRoute><ChildrenInformation language={language} /></ProtectedRoute>} />
+              <Route path="/upload-files" element={<ProtectedRoute><UploadFiles language={language} /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications language={language} /></ProtectedRoute>} />
               {/* <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /> */}
               <Route path="/settings" element={<ProtectedRoute><Settings language={language} /></ProtectedRoute>} />

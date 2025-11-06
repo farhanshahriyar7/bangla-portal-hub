@@ -35,6 +35,7 @@ const Index = () => {
       "office-information": { bn: "দাপ্তরিক তথ্য", en: "Office Information" },
       "general-information": { bn: "সাধারণ তথ্য", en: "General Information" },
       'children-information': { bn: "সন্তানদের তথ্যাবলি", en: "Children Information" },
+      'upload-files': { bn: "আপলোড", en: "Upload Files" },
       documents: { bn: "নথিপত্র", en: "Documents" },
       leave: { bn: "ছুটির আবেদন", en: "Leave Application" },
       settings: { bn: "সেটিংস", en: "Settings" },
@@ -76,6 +77,11 @@ const Index = () => {
     // Children Information page
     if (section === "children-information") {
       navigate("/children-information");
+      return;
+    }
+
+    if (section === 'upload-files') {
+      navigate('/upload-files');
       return;
     }
 

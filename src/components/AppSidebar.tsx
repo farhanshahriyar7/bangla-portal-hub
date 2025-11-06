@@ -34,7 +34,7 @@ export function AppSidebar({
   ]);
 
   const [toolsMenuItems, setToolsMenuItems] = useState<Array<{ title: string; url: string; icon: IconType; section: string }>>([
-    { title: language === 'bn' ? 'আপলোড' : 'Upload', url: '/upload', icon: Upload as IconType, section: 'upload' },
+    { title: language === 'bn' ? 'আপলোড' : 'Upload', url: '/upload-files', icon: Upload as IconType, section: 'upload-files' },
     { title: language === 'bn' ? 'ডাউনলোড' : 'Download', url: '/download', icon: Download as IconType, section: 'download' },
     { title: language === 'bn' ? 'নোটিফিকেশন' : 'Notifications', url: '/notifications', icon: Bell as IconType, section: 'notifications' },
   ]);

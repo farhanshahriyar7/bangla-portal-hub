@@ -42,9 +42,17 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { CopyRights } from "@/components/CopyRights";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
-// (no breadcrumb component used here to keep layout simple)
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbPage,
+    BreadcrumbSeparator
+} from "@/components/ui/breadcrumb";
+import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { BreadcrumbList } from "@/components/ui/breadcrumb";
 
 interface ChildInfo {
     id: string;
@@ -82,6 +90,8 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
     });
 
     const t = {
+        // dashboard: language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard',
+        dashboard: language === 'bn' ? 'Dashboard' : 'Dashboard',
         title: language === 'bn' ? 'সন্তানদের তথ্যাবলি' : 'Children Information',
         subtext: language === 'bn' ? 'অনুগ্রহ করে আপনার তথ্য সঠিক এবং সম্পূর্ণরূপে আপডেট করুন।' : 'Please update your information accurately and completely.',
         addNew: language === 'bn' ? '+ নতুন তথ্য' : '+ Add New Information',
@@ -115,6 +125,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         if (section === 'dashboard') { navigate('/'); return; }
         if (section === 'general-information') { navigate('/general-information'); return; }
         if (section === 'office-information') { navigate('/office-information'); return; }
+        if (section === 'upload-files') { navigate('/upload-files'); return; }
         if (section === 'notifications') { navigate('/notifications'); return; }
         if (section === 'security') { navigate('/security'); return; }
         if (section === 'settings') { navigate('/settings'); return; }
@@ -309,9 +320,23 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                 <Menu className="h-4 w-4" />
                             </SidebarTrigger>
 
-                            <div className='flex items-center gap-1.5'>
+                            {/* <div className='flex items-center gap-1.5'>
                                 <h2 className="text-lg font-semibold">{t.title}</h2>
-                            </div>
+                            </div> */}
+                            <Breadcrumb>
+                                <BreadcrumbList>
+                                    <BreadcrumbItem>
+                                        <BreadcrumbLink asChild>
+                                            <Link to="/">
+                                                {t.dashboard}</Link>
+                                        </BreadcrumbLink>
+                                    </BreadcrumbItem>
+                                    <BreadcrumbSeparator />
+                                    <BreadcrumbItem>
+                                        <BreadcrumbPage className="text-gray-800">{t.title}</BreadcrumbPage>
+                                    </BreadcrumbItem>
+                                </BreadcrumbList>
+                            </Breadcrumb>
 
                             <div className="flex-1" />
 

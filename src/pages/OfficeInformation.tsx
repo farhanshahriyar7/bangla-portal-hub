@@ -270,6 +270,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       return;
     }
 
+    if (section === 'upload-files') {
+      navigate('/upload-files');
+      return;
+    }
+
     if (section === 'children-information') {
       navigate('/children-information');
       return;

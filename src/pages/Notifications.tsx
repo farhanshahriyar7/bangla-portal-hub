@@ -216,6 +216,17 @@ const Notifications = ({ language }: { language: "en" | "bn" }) => {
       navigate('/general-information');
       return;
     }
+    
+    if (section === 'children-information') {
+      navigate('/children-information');
+      return;
+    }
+
+    if (section === 'upload-files') {
+      navigate('/upload-files');
+      return;
+    }
+
 
     if (section === 'security') {
       navigate('/security');

@@ -64,13 +64,18 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
       return;
     }
     
-        if (section === 'office-information') {
-          navigate('/office-information');
-          return;
-        }
+    if (section === 'office-information') {
+      navigate('/office-information');
+      return;
+    }
     
      if (section === 'children-information') {
       navigate('/children-information');
+      return;
+    }
+
+    if (section === 'upload-files') {
+      navigate('/upload-files');
       return;
     }
 
