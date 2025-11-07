@@ -268,30 +268,64 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         });
     };
 
-    const handleDownload = () => {
-        const csvContent = [
-            [t.fullName, t.birthDate, t.gender, t.age, t.maritalStatus, t.specialStatus].join(','),
-            ...children.map(c => [
-                c.fullName,
-                format(c.birthDate, 'dd/MM/yyyy'),
-                c.gender,
-                c.age,
-                c.maritalStatus,
-                c.specialStatus,
-            ].join(','))
-        ].join('\n');
+    // Open confirmation for deleting all rows
+    const handleDeleteAll = () => {
+        setDeleteMode('all');
+        setDeleteConfirmOpen(true);
+    };
 
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'children-information.csv';
-        a.click();
-        window.URL.revokeObjectURL(url);
+    // XLSX download logic, similar to GeneralInformation.tsx
+    const handleDownload = () => {
+        // Helper function to detect if text contains Bangla characters
+        const isBangla = (text) => /[\u0980-\u09FF]/.test(text);
+
+        // Prepare export data
+        const exportData = children.map((c) => ({
+            [t.fullName]: c.fullName || '',
+            [t.birthDate]: c.birthDate ? format(c.birthDate, 'dd/MM/yyyy') : '',
+            [t.gender]: c.gender || '',
+            [t.age]: c.age || '',
+            [t.maritalStatus]: c.maritalStatus || '',
+            [t.specialStatus]: c.specialStatus || '',
+        }));
+
+        // Add header row if no children (to avoid empty file)
+        if (exportData.length === 0) {
+            exportData.push({
+                [t.fullName]: '',
+                [t.birthDate]: '',
+                [t.gender]: '',
+                [t.age]: '',
+                [t.maritalStatus]: '',
+                [t.specialStatus]: '',
+            });
+        }
+
+        // Create worksheet
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+        // Apply fonts to cells based on content and make the header row bold
+        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                const cell = worksheet[cellAddress];
+                if (!cell) continue;
+                const cellValue = String(cell.v ?? '');
+                const fontName = isBangla(cellValue) ? 'SutonnyOMJ' : 'Times New Roman';
+                cell.s = cell.s || {};
+                cell.s.font = { name: fontName, sz: 12, ...(R === range.s.r ? { bold: true } : {}) };
+            }
+        }
+
+        // Create workbook and download
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, language === 'bn' ? 'সন্তানদের তথ্য' : 'Children Information');
+        XLSX.writeFile(workbook, `children_information_${new Date().toISOString().split('T')[0]}.xlsx`);
 
         toast({
-            title: language === 'bn' ? 'সফল' : 'Success',
-            description: language === 'bn' ? 'ফাইল ডাউনলোড করা হয়েছে।' : 'File downloaded successfully.',
+            title: language === 'bn' ? 'ডাউনলোড সফল' : 'Download Successful',
+            description: language === 'bn' ? 'ফাইলটি ডাউনলোড হয়েছে' : 'File has been downloaded',
         });
     };
 
@@ -380,10 +414,16 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                         <Trash2 className="h-4 w-4" />
                                         {t.delete}
                                     </Button>
-                                    <Button variant="outline" onClick={handleDownload} className="gap-2">
+                                
+                                    {/* Delete all */}
+                                    {/* <Button onClick={handleDeleteAll} variant="destructive" className="hidden sm:inline-flex bg-red-950 hover:bg-red-900 text-white">
+                                        {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
+                                    </Button> */}
+
+                                    {/* <Button variant="outline" onClick={handleDownload} disabled className="gap-2">
                                         <Download className="h-4 w-4" />
                                         {t.download}
-                                    </Button>
+                                    </Button> */}
                                 </div>
                             </div>
 
@@ -401,20 +441,21 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                 ) : (
                                     <Table>
                                         <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-12">
+                                            <TableRow className="bg-green-800 text-white hover:bg-green-800 border-b-[2px] border-green-900 dark:border-green-700 shadow-sm">
+                                                <TableHead className="w-12 font-semibold text-left text-white text-xs">
                                                     <Checkbox
                                                         checked={selectedChildren.length === children.length && children.length > 0}
                                                         onCheckedChange={toggleSelectAll}
+                                                        className="bg-white border-2 border-green-700 dark:border-green-600 hover:border-green-900 hover:dark:border-green-500"
                                                     />
                                                 </TableHead>
-                                                <TableHead>{t.fullName}</TableHead>
-                                                <TableHead>{t.birthDate}</TableHead>
-                                                <TableHead>{t.gender}</TableHead>
-                                                <TableHead>{t.age}</TableHead>
-                                                <TableHead>{t.maritalStatus}</TableHead>
-                                                <TableHead>{t.specialStatus}</TableHead>
-                                                <TableHead className="text-right">{t.actions}</TableHead>
+                                                <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.fullName}</TableHead>
+                                                <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.birthDate}</TableHead>
+                                                <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.gender}</TableHead>
+                                                <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.age}</TableHead>
+                                                <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.maritalStatus}</TableHead>
+                                                <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.specialStatus}</TableHead>
+                                                <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-right">{t.actions}</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -478,7 +519,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                                     >
                                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                                         {formData.birthDate ? format(formData.birthDate, "PPP") : <span>{t.selectDate}</span>}
-                                                       
+
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
