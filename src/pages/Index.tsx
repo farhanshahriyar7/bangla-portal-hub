@@ -80,6 +80,13 @@ const Index = () => {
       return;
     }
 
+    // Marital Status page
+    if (section === 'marital-status') {
+      navigate('/marital-status');
+      return;
+    }
+
+    // Upload Files page
     if (section === 'upload-files') {
       navigate('/upload-files');
       return;

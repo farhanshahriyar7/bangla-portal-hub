@@ -270,6 +270,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       return;
     }
 
+      if (section === 'marital-status') {
+      navigate('/marital-status');
+      return;
+    }
+
     if (section === 'upload-files') {
       navigate('/upload-files');
       return;

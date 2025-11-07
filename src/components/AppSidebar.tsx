@@ -30,6 +30,9 @@ export function AppSidebar({
     { title: language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard', url: '/', icon: Home as IconType, section: 'dashboard' },
     { title: language === 'bn' ? 'দাপ্তরিক তথ্যাবলি' : 'Office Information', url: '/office-information', icon: Building2 as IconType, section: 'office-information' },
     { title: language === 'bn' ? 'সাধারণ তথ্যাবলি' : 'General Information', url: '/general-information', icon: User as IconType, section: 'general-information' },
+    {
+      title: language === 'bn' ? 'বৈবাহিক অবস্থা' : 'Marital Status', url: '/marital-status', icon: User as IconType, section: 'marital-status'
+    },
     { title: language === 'bn' ? 'সন্তানদের তথ্যাবলি' : 'Children Information', url: '/children-information', icon: Users as IconType, section: 'children-information' },
   ]);
 

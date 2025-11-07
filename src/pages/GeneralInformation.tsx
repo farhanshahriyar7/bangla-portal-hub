@@ -586,6 +586,11 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
       return;
     }
 
+    if (section === 'marital-status') {
+      navigate('/marital-status');
+      return;
+    }
+
     if (section === 'upload-files') {
       navigate('/upload-files');
       return;
