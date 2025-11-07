@@ -20,7 +20,7 @@
     "noUnusedParameters": false,
     "noImplicitAny": false,
     "noFallthroughCasesInSwitch": false,
-
+    // baseUrl and paths are required to make absolute imports work
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
