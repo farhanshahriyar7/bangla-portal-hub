@@ -329,7 +329,7 @@ const Notifications = ({ language }: { language: "en" | "bn" }) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {loading ? (
+                    {/* {loading ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8">
                           Loading...
@@ -358,7 +358,9 @@ const Notifications = ({ language }: { language: "en" | "bn" }) => {
                           </TableCell>
                         </TableRow>
                       ))
-                    )}
+                    )} */}
+
+                    Under Development
                   </TableBody>
                 </Table>
               </div>

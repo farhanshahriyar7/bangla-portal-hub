@@ -27,7 +27,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar22 } from "@/components/ui/calendar22";
 import {
     Popover,
     PopoverContent,
@@ -141,7 +141,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
             return;
         }
 
-        toast({ title: language === 'bn' ? 'শীঘ্রই আসছে' : 'Coming Soon', description: language === 'bn' ? 'এই পেজটি শীঘ্রই উপলব্ধ হবে।' : 'This page will be available soon.' });
+        toast({ title: language === 'bn' ? 'নির্মাণ চলছে' : 'Under Construction', description: language === 'bn' ? 'এই পেজটি শীঘ্রই উপলব্ধ হবে।' : 'This page will be available soon.' });
     };
 
     const calculateAge = (birthDate: Date) => {
@@ -459,6 +459,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                             <Label htmlFor="fullName">{t.fullName}</Label>
                                             <Input
                                                 id="fullName"
+                                                placeholder={language === 'bn' ? 'সন্তানের পূর্ণ নাম লিখুন' : 'Enter child\'s full name'}
                                                 value={formData.fullName}
                                                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                                             />
@@ -477,15 +478,14 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                                     >
                                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                                         {formData.birthDate ? format(formData.birthDate, "PPP") : <span>{t.selectDate}</span>}
+                                                       
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={formData.birthDate}
-                                                        onSelect={handleBirthDateChange}
-                                                        initialFocus
-                                                        className="pointer-events-auto"
+                                                    <Calendar22
+                                                        value={formData.birthDate}
+                                                        onChange={handleBirthDateChange}
+                                                        id="birthDate"
                                                     />
                                                 </PopoverContent>
                                             </Popover>
@@ -495,7 +495,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                             <Label>{t.gender}</Label>
                                             <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
                                                 <SelectTrigger>
-                                                    <SelectValue />
+                                                    <SelectValue placeholder={language === 'bn' ? 'লিঙ্গ নির্বাচন করুন' : 'Select gender'} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value={t.male}>{t.male}</SelectItem>
@@ -509,6 +509,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                             <Input
                                                 id="age"
                                                 type="number"
+                                                placeholder={language === 'bn' ? 'সন্তানের বয়স লিখুন' : 'Enter child\'s age'}
                                                 value={formData.age}
                                                 onChange={(e) => setFormData({ ...formData, age: e.target.value })}
                                             />
@@ -518,7 +519,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                             <Label>{t.maritalStatus}</Label>
                                             <Select value={formData.maritalStatus} onValueChange={(value) => setFormData({ ...formData, maritalStatus: value })}>
                                                 <SelectTrigger>
-                                                    <SelectValue />
+                                                    <SelectValue placeholder={language === 'bn' ? 'বৈবাহিক অবস্থা নির্বাচন করুন' : 'Select marital status'} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value={t.married}>{t.married}</SelectItem>
@@ -531,7 +532,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                             <Label>{t.specialStatus}</Label>
                                             <Select value={formData.specialStatus} onValueChange={(value) => setFormData({ ...formData, specialStatus: value })}>
                                                 <SelectTrigger>
-                                                    <SelectValue />
+                                                    <SelectValue placeholder={language === 'bn' ? 'বিশেষ অবস্থা নির্বাচন করুন' : 'Select special status'} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value={t.widow}>{t.widow}</SelectItem>
