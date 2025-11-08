@@ -1,5 +1,5 @@
 import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Menu } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -59,6 +59,16 @@ const translations = {
         officePhonePlaceholder: "+8801XXXXXXXXX বা 01XXXXXXXXX",
         addSpouse: "আরেকটি স্বামী/স্ত্রীর তথ্য যোগ করুন",
         removeSpouse: "মুছে ফেলুন",
+        businessName: "ব্যবসার নাম",
+        businessNamePlaceholder: "ব্যবসার নাম লিখুন",
+        businessType: "ব্যবসার ধরণ",
+        businessTypePlaceholder: "ব্যবসার ধরণ লিখুন",
+        businessAddress: "ব্যবসার ঠিকানা",
+        businessAddressPlaceholder: "ব্যবসার পূর্ণ ঠিকানা লিখুন",
+        businessRegNumber: "ব্যবসা / রেজিস্ট্রেশন নম্বর",
+        businessRegNumberPlaceholder: "রেজিস্ট্রেশন নম্বর লিখুন",
+        businessPhone: "ব্যবসার ফোন নম্বর",
+        businessPhonePlaceholder: "+8801XXXXXXXXX বা 01XXXXXXXXX",
         save: "সংরক্ষণ করুন",
         success: "সফলভাবে সংরক্ষিত হয়েছে",
         successDesc: "বৈবাহিক তথ্য সফলভাবে সংরক্ষিত হয়েছে",
@@ -84,6 +94,16 @@ const translations = {
         business: "Business",
         housewife: "Housewife",
         other: "Other",
+        businessName: "Business Name",
+        businessNamePlaceholder: "Enter business name",
+        businessType: "Business Type",
+        businessTypePlaceholder: "Enter business type",
+        businessAddress: "Business Address",
+        businessAddressPlaceholder: "Enter full business address",
+        businessRegNumber: "Business / Registration No.",
+        businessRegNumberPlaceholder: "Enter registration number",
+        businessPhone: "Business Phone Number",
+        businessPhonePlaceholder: "+8801XXXXXXXXX or 01XXXXXXXXX",
         nid: "National ID Number",
         nidPlaceholder: "10-17 digit NID",
         tin: "TIN",
@@ -134,6 +154,15 @@ const spouseSchema = z.object({
         if (!val) return true;
         return /^(\+8801|01)\d{9}$/.test(val);
     }, "Phone must be +8801XXXXXXXXX or 01XXXXXXXXX format"),
+    // Business-specific fields
+    businessName: z.string().optional(),
+    businessType: z.string().optional(),
+    businessAddress: z.string().optional(),
+    businessPhone: z.string().optional().refine((val) => {
+        if (!val) return true;
+        return /^(\+8801|01)\d{9}$/.test(val);
+    }, "Phone must be +8801XXXXXXXXX or 01XXXXXXXXX format"),
+    businessRegNumber: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -204,6 +233,11 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
                 designation: "",
                 officeAddress: "",
                 officePhone: "",
+                businessName: "",
+                businessType: "",
+                businessAddress: "",
+                businessPhone: "",
+                businessRegNumber: "",
             });
         }
 
@@ -219,6 +253,11 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
                 <AppSidebar language={language} onNavigate={handleNavigate} />
                 <div className="flex-1 flex flex-col">
                     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
+                        <div className="flex items-center">
+                            <SidebarTrigger className="p-2 h-10 w-10 flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground transition-colors">
+                                <Menu className="h-5 w-5" />
+                            </SidebarTrigger>
+                        </div>
                         <div className="flex items-center gap-2 flex-1">
                             <Breadcrumb>
                                 <BreadcrumbList>
@@ -232,8 +271,8 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
                                 </BreadcrumbList>
                             </Breadcrumb>
                         </div>
-                        <ThemeToggle />
                         <LanguageToggle onLanguageChange={handleLanguageChange} currentLanguage={language} />
+                        <ThemeToggle />
                     </header>
 
                     <main className="flex-1 p-6 overflow-auto">
@@ -245,7 +284,7 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
                                     : 'Provide your marital information and spouse details'}
                             </CardDescription>
                         </CardHeader>
-                        <div className="max-w-4xl mx-auto">
+                        <div className="max-w-7xl mx-auto">
                             <Card>
                                 <CardContent>
                                     <Form {...form}>
@@ -254,7 +293,7 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
                                                 control={form.control}
                                                 name="maritalStatus"
                                                 render={({ field }) => (
-                                                    <FormItem>
+                                                    <FormItem className="mt-5">
                                                         <FormLabel>{t.maritalStatusLabel} *</FormLabel>
                                                         <Select
                                                             onValueChange={handleMaritalStatusChange}
@@ -296,6 +335,11 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
                                                                 designation: "",
                                                                 officeAddress: "",
                                                                 officePhone: "",
+                                                                businessName: "",
+                                                                businessType: "",
+                                                                businessAddress: "",
+                                                                businessPhone: "",
+                                                                businessRegNumber: "",
                                                             })}
                                                         >
                                                             <Plus className="h-4 w-4 mr-2" />
@@ -307,6 +351,7 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
                                                         const occupation = form.watch(`spouses.${index}.occupation`);
                                                         const isGovtEmployee = occupation === "govtEmployee";
                                                         const isPrivateEmployee = occupation === "privateEmployee";
+                                                        const isBusiness = occupation === "business";
 
                                                         return (
                                                             <Card key={field.id} className="p-4 relative">
@@ -478,42 +523,75 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
                                                                     {
                                                                         isPrivateEmployee && (
                                                                             <>
-                                                                            <FormField
-                                                                                control={form.control}
-                                                                                name={`spouses.${index}.employeeId`}
-                                                                                render={({ field }) => (
-                                                                                    <FormItem>
-                                                                                        <FormLabel>{t.employeeId}</FormLabel>
-                                                                                        <FormControl>
-                                                                                            <Input placeholder={t.employeeIdPlaceholder} {...field} />
-                                                                                        </FormControl>
-                                                                                        <FormMessage />
-                                                                                    </FormItem>
-                                                                                )}
-                                                                            />
+                                                                                <FormField
+                                                                                    control={form.control}
+                                                                                    name={`spouses.${index}.employeeId`}
+                                                                                    render={({ field }) => (
+                                                                                        <FormItem>
+                                                                                            <FormLabel>{t.employeeId}</FormLabel>
+                                                                                            <FormControl>
+                                                                                                <Input placeholder={t.employeeIdPlaceholder} {...field} />
+                                                                                            </FormControl>
+                                                                                            <FormMessage />
+                                                                                        </FormItem>
+                                                                                    )}
+                                                                                />
 
-                                                                            <FormField
-                                                                                control={form.control}
-                                                                                name={`spouses.${index}.designation`}
-                                                                                render={({ field }) => (
-                                                                                    <FormItem>
-                                                                                        <FormLabel>{t.designation}</FormLabel>
-                                                                                        <FormControl>
-                                                                                            <Input placeholder={t.designationPlaceholder} {...field} />
-                                                                                        </FormControl>
-                                                                                        <FormMessage />
-                                                                                    </FormItem>
-                                                                                )}
-                                                                            />
+                                                                                <FormField
+                                                                                    control={form.control}
+                                                                                    name={`spouses.${index}.designation`}
+                                                                                    render={({ field }) => (
+                                                                                        <FormItem>
+                                                                                            <FormLabel>{t.designation}</FormLabel>
+                                                                                            <FormControl>
+                                                                                                <Input placeholder={t.designationPlaceholder} {...field} />
+                                                                                            </FormControl>
+                                                                                            <FormMessage />
+                                                                                        </FormItem>
+                                                                                    )}
+                                                                                />
 
+                                                                                <FormField
+                                                                                    control={form.control}
+                                                                                    name={`spouses.${index}.officeAddress`}
+                                                                                    render={({ field }) => (
+                                                                                        <FormItem className="md:col-span-2">
+                                                                                            <FormLabel>{t.officeAddress}</FormLabel>
+                                                                                            <FormControl>
+                                                                                                <Input placeholder={t.officeAddressPlaceholder} {...field} />
+                                                                                            </FormControl>
+                                                                                            <FormMessage />
+                                                                                        </FormItem>
+                                                                                    )}
+                                                                                />
+
+                                                                                <FormField
+                                                                                    control={form.control}
+                                                                                    name={`spouses.${index}.officePhone`}
+                                                                                    render={({ field }) => (
+                                                                                        <FormItem>
+                                                                                            <FormLabel>{t.officePhone}</FormLabel>
+                                                                                            <FormControl>
+                                                                                                <Input placeholder={t.officePhonePlaceholder} {...field} />
+                                                                                            </FormControl>
+                                                                                            <FormMessage />
+                                                                                        </FormItem>
+                                                                                    )}
+                                                                                />
+                                                                            </>
+                                                                        )
+                                                                    }
+
+                                                                    {isBusiness && (
+                                                                        <>
                                                                             <FormField
                                                                                 control={form.control}
-                                                                                name={`spouses.${index}.officeAddress`}
+                                                                                name={`spouses.${index}.businessName`}
                                                                                 render={({ field }) => (
                                                                                     <FormItem className="md:col-span-2">
-                                                                                        <FormLabel>{t.officeAddress}</FormLabel>
+                                                                                        <FormLabel>{t.businessName}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.officeAddressPlaceholder} {...field} />
+                                                                                            <Input placeholder={t.businessNamePlaceholder} {...field} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -522,20 +600,61 @@ const MaritalStatus = ({ language: initialLanguage }: MaritalStatusProps) => {
 
                                                                             <FormField
                                                                                 control={form.control}
-                                                                                name={`spouses.${index}.officePhone`}
+                                                                                name={`spouses.${index}.businessType`}
                                                                                 render={({ field }) => (
                                                                                     <FormItem>
-                                                                                        <FormLabel>{t.officePhone}</FormLabel>
+                                                                                        <FormLabel>{t.businessType}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.officePhonePlaceholder} {...field} />
+                                                                                            <Input placeholder={t.businessTypePlaceholder} {...field} />
+                                                                                        </FormControl>
+                                                                                        <FormMessage />
+                                                                                    </FormItem>
+                                                                                )}
+                                                                            />
+
+                                                                            <FormField
+                                                                                control={form.control}
+                                                                                name={`spouses.${index}.businessAddress`}
+                                                                                render={({ field }) => (
+                                                                                    <FormItem className="md:col-span-2">
+                                                                                        <FormLabel>{t.businessAddress}</FormLabel>
+                                                                                        <FormControl>
+                                                                                            <Input placeholder={t.businessAddressPlaceholder} {...field} />
+                                                                                        </FormControl>
+                                                                                        <FormMessage />
+                                                                                    </FormItem>
+                                                                                )}
+                                                                            />
+
+                                                                            <FormField
+                                                                                control={form.control}
+                                                                                name={`spouses.${index}.businessRegNumber`}
+                                                                                render={({ field }) => (
+                                                                                    <FormItem>
+                                                                                        <FormLabel>{t.businessRegNumber}</FormLabel>
+                                                                                        <FormControl>
+                                                                                            <Input placeholder={t.businessRegNumberPlaceholder} {...field} />
+                                                                                        </FormControl>
+                                                                                        <FormMessage />
+                                                                                    </FormItem>
+                                                                                )}
+                                                                            />
+
+                                                                            <FormField
+                                                                                control={form.control}
+                                                                                name={`spouses.${index}.businessPhone`}
+                                                                                render={({ field }) => (
+                                                                                    <FormItem>
+                                                                                        <FormLabel>{t.businessPhone}</FormLabel>
+                                                                                        <FormControl>
+                                                                                            <Input placeholder={t.businessPhonePlaceholder} {...field} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
                                                                                 )}
                                                                             />
                                                                         </>
-                                                                        )
-                                                                    }
+                                                                    )}
                                                                 </div>
                                                             </Card>
                                                         );
