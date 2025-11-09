@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Menu, Upload, FileText, Image, FileArchive, Trash2, Download, Bell, Eye, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Progress } from "@/components/ui/progress";
+import { supabase } from '@/lib/supabaseClient';
 import {
   Pagination,
   PaginationContent,
@@ -57,6 +58,10 @@ interface UploadedFile {
   file?: File;
   // track upload progress
   uploadProgress?: UploadProgress;
+  // storage path returned by Supabase (uploads/<...>)
+  storagePath?: string;
+  // raw size in bytes
+  sizeBytes?: number;
 }
 
 export default function UploadFiles({ language: initialLanguage = 'en' }: UploadFilesProps) {
@@ -75,7 +80,7 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
   const previewUrlsRef = useRef<Set<string>>(new Set());
 
   const t = {
-    dashboard: language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard',
+    dashboard: language === 'bn' ? 'Dashboard' : 'Dashboard',
     title: language === 'bn' ? 'ফাইল আপলোড' : 'Upload Files',
     subtitle: language === 'bn' ? 'আপনার নথি এবং ফাইল আপলোড করুন' : 'Upload your documents and files',
     uploadArea: language === 'bn' ? 'এখানে ফাইল ড্রাগ করুন অথবা ক্লিক করুন' : 'Drag and drop files here or click to browse',
@@ -137,16 +142,43 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
     return { valid: true };
   };
 
-  const simulateFileUpload = async (file: File, onProgress: (progress: number) => void): Promise<void> => {
-    const totalSize = file.size;
-    let uploadedSize = 0;
-    const chunkSize = totalSize / 10; // Simulate 10 chunks
-    
-    while (uploadedSize < totalSize) {
-      await new Promise(resolve => setTimeout(resolve, 200)); // 200ms per chunk
-      uploadedSize = Math.min(uploadedSize + chunkSize, totalSize);
-      const progress = (uploadedSize / totalSize) * 100;
+  // Upload file to Supabase Storage while providing simulated progress updates
+  const uploadFileWithProgress = async (
+    file: File,
+    onProgress: (p: number) => void
+  ): Promise<{ path?: string; error?: any }> => {
+    // Start a soft progress indicator while the real upload happens
+    let progress = 0;
+    onProgress(progress);
+
+    const interval = setInterval(() => {
+      // increase progress slowly until 90%
+      progress = Math.min(90, progress + Math.floor(Math.random() * 8) + 3);
       onProgress(progress);
+    }, 200);
+
+    try {
+      const safeName = `${Date.now()}_${(crypto && (crypto as any).randomUUID ? (crypto as any).randomUUID() : Math.random().toString(36).slice(2, 9))}_${file.name}`;
+      const uploadPath = safeName;
+
+      const { data, error } = await supabase.storage
+        .from('uploads')
+        .upload(uploadPath, file, { upsert: false, contentType: file.type });
+
+      clearInterval(interval);
+
+      if (error) {
+        onProgress(0);
+        return { error };
+      }
+
+      // mark as complete
+      onProgress(100);
+      return { path: data?.path };
+    } catch (err) {
+      clearInterval(interval);
+      onProgress(0);
+      return { error: err };
     }
   };
 
@@ -181,16 +213,17 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
     setOverallProgress(0);
 
     try {
-      // Initialize files with 0% progress
+      // Initialize files with 0% progress + preview URLs where possible
       const newFiles: UploadedFile[] = validFiles.map((file, index) => {
-        const previewUrl = (file.type.startsWith('image/') || file.type === 'application/pdf') 
-          ? URL.createObjectURL(file) 
+        const previewUrl = (file.type.startsWith('image/') || file.type === 'application/pdf')
+          ? URL.createObjectURL(file)
           : undefined;
         if (previewUrl) previewUrlsRef.current.add(previewUrl);
         return {
           id: `file-${Date.now()}-${index}`,
           name: file.name,
           size: formatFileSize(file.size),
+          sizeBytes: file.size,
           type: file.type,
           uploadedAt: new Date().toLocaleString(language === 'bn' ? 'bn-BD' : 'en-US'),
           previewUrl,
@@ -202,47 +235,76 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
         };
       });
 
-      // Add files to state immediately to show progress
+      // Add files to state immediately
       setUploadedFiles((prev) => [...newFiles, ...prev]);
 
-      // Process uploads one by one
+      // Process uploads sequentially
       for (let i = 0; i < newFiles.length; i++) {
-        const file = newFiles[i];
-        
-        // Update file progress
-        await simulateFileUpload(file.file!, (progress) => {
-          setUploadedFiles((prev) => {
-            const updatedFiles = [...prev];
-            const fileIndex = updatedFiles.findIndex(f => f.id === file.id);
-            if (fileIndex !== -1) {
-              updatedFiles[fileIndex] = {
-                ...updatedFiles[fileIndex],
-                uploadProgress: {
-                  progress: Math.round(progress),
-                  status: progress === 100 ? 'completed' : 'uploading'
-                }
-              };
-            }
-            return updatedFiles;
-          });
+        const uf = newFiles[i];
 
-          // Update overall progress
-          const totalProgress = ((i + (progress / 100)) / newFiles.length) * 100;
+        // mark uploading
+        setUploadedFiles((prev) => prev.map(f => f.id === uf.id ? { ...f, uploadProgress: { progress: 1, status: 'uploading' } } : f));
+
+        const { path, error } = await uploadFileWithProgress(uf.file!, (p) => {
+          setUploadedFiles((prev) => prev.map(f => f.id === uf.id ? { ...f, uploadProgress: { progress: Math.round(p), status: p === 100 ? 'completed' : 'uploading' } } : f));
+
+          // Update overall progress roughly based on files completed + in-progress percentage
+          const totalProgress = ((i + (p / 100)) / newFiles.length) * 100;
           setOverallProgress(Math.round(totalProgress));
         });
+
+        if (error) {
+          // mark error
+          setUploadedFiles((prev) => prev.map(f => f.id === uf.id ? { ...f, uploadProgress: { progress: 0, status: 'error' } } : f));
+          toast({
+            title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
+            description: language === 'bn' ? `ফাইল আপলোড করতে সমস্যা হয়েছে: ${uf.name}` : `Failed to upload: ${uf.name}`,
+            variant: 'destructive',
+          });
+          continue;
+        }
+
+        // Insert metadata into DB
+        try {
+          const record = {
+            id: (crypto && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `id-${Date.now()}-${i}`,
+            name: uf.name,
+            path: path,
+            size: uf.sizeBytes ?? 0,
+            content_type: uf.type,
+            bucket: 'uploads',
+            uploaded_at: new Date().toISOString()
+          } as any;
+
+          const { error: insertError } = await supabase.from('uploaded_files').insert(record);
+          if (insertError) {
+            // non-fatal: notify and continue
+            console.error('DB insert error', insertError);
+            toast({
+              title: language === 'bn' ? 'ওয়ার্নিং' : 'Warning',
+              description: language === 'bn' ? 'ফাইল আপলোড হয়েছে কিন্তু রেকর্ড তৈরি করা যায়নি' : 'File uploaded but DB record could not be created',
+              variant: 'destructive',
+            });
+          }
+
+          // update the saved file entry with storage path and mark completed
+          setUploadedFiles((prev) => prev.map(f => f.id === uf.id ? { ...f, storagePath: path, uploadProgress: { progress: 100, status: 'completed' } } : f));
+        } catch (dbErr) {
+          console.error('DB error', dbErr);
+        }
       }
 
       toast({
         title: language === 'bn' ? 'সফল!' : 'Success!',
-        description: language === 'bn' 
-          ? `${validFiles.length}টি ফাইল আপলোড করা হয়েছে` 
+        description: language === 'bn'
+          ? `${validFiles.length}টি ফাইল আপলোড করা হয়েছে`
           : `${validFiles.length} file(s) uploaded successfully`,
       });
     } catch (error) {
       toast({
         title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
-        description: language === 'bn' 
-          ? 'ফাইল আপলোড করতে সমস্যা হয়েছে' 
+        description: language === 'bn'
+          ? 'ফাইল আপলোড করতে সমস্যা হয়েছে'
           : 'There was an error uploading the files',
         variant: "destructive",
       });
@@ -297,43 +359,80 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
   };
 
   const openPreview = (file: UploadedFile) => {
-    setPreviewFile(file);
-    setPreviewOpen(true);
+    // If preview URL isn't available but storagePath is, create a signed URL
+    if (!file.previewUrl && file.storagePath) {
+      (async () => {
+        const { data, error } = await supabase.storage.from('uploads').createSignedUrl(file.storagePath, 60 * 60); // 1 hour
+        if (data?.signedUrl) {
+          // update both preview file and cached state
+          setUploadedFiles((prev) => prev.map(f => f.id === file.id ? { ...f, previewUrl: data.signedUrl } : f));
+          setPreviewFile({ ...file, previewUrl: data.signedUrl });
+          setPreviewOpen(true);
+          return;
+        }
+        setPreviewFile(file);
+        setPreviewOpen(true);
+      })();
+    } else {
+      setPreviewFile(file);
+      setPreviewOpen(true);
+    }
   };
 
   const handleDownload = async (file: UploadedFile) => {
-    if (!file.file) {
+    try {
+      setDownloadingFile(file.id);
+
+      // If we have the File in memory (fresh upload), use it
+      if (file.file) {
+        // small pause for UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const url = URL.createObjectURL(file.file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast({
+          title: language === 'bn' ? 'ডাউনলোড শুরু হয়েছে!' : 'Download Started!',
+          description: language === 'bn' ? 'ফাইল ডাউনলোড হচ্ছে' : 'File is being downloaded',
+        });
+        return;
+      }
+
+      // Otherwise, try to get a signed URL from Supabase Storage
+      if (file.storagePath) {
+        const { data, error } = await supabase.storage.from('uploads').createSignedUrl(file.storagePath, 60 * 60); // 1 hour
+        if (error || !data?.signedUrl) {
+          toast({
+            title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
+            description: language === 'bn' ? 'ফাইল ডাউনলোড করা যাচ্ছে না' : 'File cannot be downloaded',
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Open the signed URL in a new tab to trigger download (or let browser handle)
+        const a = document.createElement('a');
+        a.href = data.signedUrl;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast({
+          title: language === 'bn' ? 'ডাউনলোড শুরু হয়েছে!' : 'Download Started!',
+          description: language === 'bn' ? 'ফাইল ডাউনলোড হচ্ছে' : 'File is being downloaded',
+        });
+        return;
+      }
+
+      // Fallback
       toast({
         title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
         description: language === 'bn' ? 'ফাইল ডাউনলোড করা যাচ্ছে না' : 'File cannot be downloaded',
         variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setDownloadingFile(file.id);
-
-      // Simulate some processing time for the animation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Create a temporary URL for the file
-      const url = URL.createObjectURL(file.file);
-      
-      // Create a temporary link element
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: language === 'bn' ? 'ডাউনলোড শুরু হয়েছে!' : 'Download Started!',
-        description: language === 'bn' ? 'ফাইল ডাউনলোড হচ্ছে' : 'File is being downloaded',
       });
     } finally {
       setDownloadingFile(null);
