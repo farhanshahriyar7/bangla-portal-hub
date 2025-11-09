@@ -74,9 +74,13 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
   const [uploading, setUploading] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<UploadedFile | null>(null);
   const itemsPerPage = 5;
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(true);
   const previewUrlsRef = useRef<Set<string>>(new Set());
 
   const t = {
@@ -158,7 +162,10 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
     }, 200);
 
     try {
-      const safeName = `${Date.now()}_${(crypto && (crypto as any).randomUUID ? (crypto as any).randomUUID() : Math.random().toString(36).slice(2, 9))}_${file.name}`;
+      // sanitize filename to avoid problematic characters in the path
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const uuidPart = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : Math.random().toString(36).slice(2, 9);
+      const safeName = `${Date.now()}_${uuidPart}_${sanitizedFileName}`;
       const uploadPath = safeName;
 
       const { data, error } = await supabase.storage
@@ -168,6 +175,8 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
       clearInterval(interval);
 
       if (error) {
+        // log detailed error to help debugging (inspect network/response in console)
+        console.error('Supabase upload error', { error, data, uploadPath });
         onProgress(0);
         return { error };
       }
@@ -213,6 +222,27 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
     setOverallProgress(0);
 
     try {
+      // Get current user (for secure uploads we attach user_id to DB records)
+      let currentUserId: string | null = null;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        currentUserId = userData?.user?.id ?? null;
+      } catch (err) {
+        // ignore - user may be unauthenticated
+        currentUserId = null;
+      }
+
+      // If secure mode is enabled we require authentication before uploading
+      if (!currentUserId) {
+        toast({
+          title: language === 'bn' ? 'লগইন প্রয়োজন' : 'Login required',
+          description: language === 'bn' ? 'আপলোড করার জন্য লগইন করতে হবে' : 'You must be signed in to upload files',
+          variant: 'destructive',
+        });
+        setUploading(false);
+        return;
+      }
+
       // Initialize files with 0% progress + preview URLs where possible
       const newFiles: UploadedFile[] = validFiles.map((file, index) => {
         const previewUrl = (file.type.startsWith('image/') || file.type === 'application/pdf')
@@ -266,15 +296,16 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
 
         // Insert metadata into DB
         try {
-          const record = {
-            id: (crypto && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `id-${Date.now()}-${i}`,
-            name: uf.name,
-            path: path,
-            size: uf.sizeBytes ?? 0,
-            content_type: uf.type,
-            bucket: 'uploads',
-            uploaded_at: new Date().toISOString()
-          } as any;
+            const record = {
+              id: (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `id-${Date.now()}-${i}`,
+              user_id: currentUserId,
+              name: uf.name,
+              path: path,
+              size: uf.sizeBytes ?? 0,
+              content_type: uf.type,
+              bucket: 'uploads',
+              uploaded_at: new Date().toISOString()
+            } as any;
 
           const { error: insertError } = await supabase.from('uploaded_files').insert(record);
           if (insertError) {
@@ -328,6 +359,53 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
     };
   }, []);
 
+  // Fetch persisted uploads from DB on mount
+  useEffect(() => {
+    let mounted = true;
+    const fetchUploads = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('uploaded_files')
+          .select('id, name, path, size, content_type, uploaded_at')
+          .order('uploaded_at', { ascending: false })
+          .limit(200);
+
+        if (error) {
+          console.error('Failed to fetch uploaded_files', error);
+          toast({
+            title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
+            description: language === 'bn' ? 'আপলোডকৃত ফাইল লোড করা যায়নি' : 'Failed to load uploaded files',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        if (!mounted || !data) return;
+
+        const rows = (data as Array<any>).map((r) => ({
+          id: String(r.id),
+          name: r.name,
+          size: formatFileSize(Number(r.size) || 0),
+          sizeBytes: Number(r.size) || 0,
+          type: r.content_type || 'application/octet-stream',
+          uploadedAt: new Date(r.uploaded_at).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-US'),
+          storagePath: r.path,
+          uploadProgress: { progress: 100, status: 'completed' as const }
+        } as UploadedFile));
+
+        // Set fetched uploads as initial list
+        setUploadedFiles((prev) => [...rows, ...prev]);
+      } catch (err) {
+        console.error('Error fetching uploads', err);
+      } finally {
+        if (mounted) setLoadingExisting(false);
+      }
+    };
+
+    fetchUploads();
+    return () => { mounted = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Note: preview URLs are revoked on delete; a full unmount cleanup was intentionally omitted
   // to avoid revoking URLs that may still be in use. If needed, we can implement a robust
   // unmount revocation strategy that snapshots refs safely.
@@ -338,24 +416,94 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
 
-  const handleDelete = (id: string) => {
-    setUploadedFiles((prev) => {
-      const toDelete = prev.find((f) => f.id === id);
-      if (toDelete?.previewUrl) {
-        URL.revokeObjectURL(toDelete.previewUrl);
-        previewUrlsRef.current.delete(toDelete.previewUrl);
+  const handleDelete = async (id: string) => {
+    // This function is retained for backward compat but will not be used directly.
+    console.warn('handleDelete(id) is deprecated; use requestDelete(file) which opens a confirmation dialog.');
+  };
+
+  const requestDelete = (file: UploadedFile) => {
+    setFileToDelete(file);
+    setConfirmOpen(true);
+  };
+
+  const performDelete = async (file: UploadedFile) => {
+    setDeletingFile(file.id);
+    try {
+      // Ensure we have a path or id to delete
+      const path = file.storagePath ?? null;
+
+      // If there's a storage path, remove from storage first. If that fails, abort.
+      if (path) {
+        const { error: storageError } = await supabase.storage.from('uploads').remove([path]);
+        if (storageError) {
+          console.error('Storage delete error', storageError);
+          toast({
+            title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
+            description: language === 'bn'
+              ? 'স্টোরেজ থেকে ফাইল মুছে ফেলা যায়নি। অনুগ্রহ করে পরে আবার চেষ্টা করুন।'
+              : 'Failed to remove file from storage. Please try again later.',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
-      const updated = prev.filter(file => file.id !== id);
-      // adjust current page if necessary
-      const maxPage = Math.max(1, Math.ceil(updated.length / itemsPerPage));
-      if (currentPage > maxPage) setCurrentPage(maxPage);
-      return updated;
-    });
-    toast({
-      title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
-      description: language === 'bn' ? 'ফাইলটি মুছে ফেলা হয়েছে' : 'File has been deleted',
-      variant: "destructive",
-    });
+
+      // Delete DB record. Prefer path if available, otherwise try id.
+      try {
+        let dbDelete;
+        if (path) {
+          dbDelete = await supabase.from('uploaded_files').delete().eq('path', path);
+        } else {
+          dbDelete = await supabase.from('uploaded_files').delete().eq('id', file.id);
+        }
+
+        if ((dbDelete as any).error) {
+          console.error('DB delete error', (dbDelete as any).error);
+          toast({
+            title: language === 'bn' ? 'ওয়ার্নিং' : 'Warning',
+            description: language === 'bn'
+              ? 'ডাটাবেস থেকে রেকর্ড মুছে ফেলা যায়নি।'
+              : 'Could not remove DB record.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('DB delete exception', err);
+        toast({
+          title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
+          description: language === 'bn' ? 'ডাটাবেস অপসারণে ত্রুটি ঘটেছে' : 'Error removing DB record',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Success: revoke preview URL and remove from UI
+      if (file.previewUrl) {
+        try {
+          URL.revokeObjectURL(file.previewUrl);
+          previewUrlsRef.current.delete(file.previewUrl);
+        } catch (e) {
+          // noop
+        }
+      }
+
+      setUploadedFiles((prev) => {
+        const updated = prev.filter(f => f.id !== file.id);
+        const maxPage = Math.max(1, Math.ceil(updated.length / itemsPerPage));
+        if (currentPage > maxPage) setCurrentPage(maxPage);
+        return updated;
+      });
+
+      toast({
+        title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
+        description: language === 'bn' ? 'ফাইলটি সফলভাবে মুছে ফেলা হয়েছে' : 'File deleted successfully',
+      });
+    } finally {
+      setDeletingFile(null);
+      setConfirmOpen(false);
+      setFileToDelete(null);
+    }
   };
 
   const openPreview = (file: UploadedFile) => {
@@ -414,17 +562,39 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
           return;
         }
 
-        // Open the signed URL in a new tab to trigger download (or let browser handle)
-        const a = document.createElement('a');
-        a.href = data.signedUrl;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        toast({
-          title: language === 'bn' ? 'ডাউনলোড শুরু হয়েছে!' : 'Download Started!',
-          description: language === 'bn' ? 'ফাইল ডাউনলোড হচ্ছে' : 'File is being downloaded',
-        });
+        // Try to fetch the signed URL and force a direct download (blob) so the file is saved
+        try {
+          const res = await fetch(data.signedUrl);
+          if (!res.ok) throw new Error('Failed to fetch file');
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name || 'download';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast({
+            title: language === 'bn' ? 'ডাউনলোড শুরু হয়েছে!' : 'Download Started!',
+            description: language === 'bn' ? 'ফাইল ডাউনলোড হচ্ছে' : 'File is being downloaded',
+          });
+          return;
+        } catch (err) {
+          // Fallback: open in new tab if blob fetch isn't allowed (CORS) or fails
+          console.warn('Direct download failed, falling back to opening signed URL', err);
+          const a = document.createElement('a');
+          a.href = data.signedUrl;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          toast({
+            title: language === 'bn' ? 'ডাউনলোড শুরু হয়েছে!' : 'Download Started!',
+            description: language === 'bn' ? 'ফাইল ডাউনলোড হচ্ছে' : 'File is being downloaded',
+          });
+          return;
+        }
         return;
       }
 
@@ -641,11 +811,22 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(file.id)}
+                              onClick={() => {
+                                // open confirmation dialog
+                                setFileToDelete(file);
+                                setConfirmOpen(true);
+                              }}
                               title={t.delete}
-                              disabled={file.uploadProgress && file.uploadProgress.status === 'uploading'}
+                              disabled={
+                                (file.uploadProgress && file.uploadProgress.status === 'uploading') ||
+                                deletingFile === file.id
+                              }
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {deletingFile === file.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </div>
@@ -681,6 +862,30 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
                 )}
               </CardContent>
             </Card>
+
+            {/* Confirmation Dialog for delete */}
+            <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) { setFileToDelete(null); } setConfirmOpen(open); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>{language === 'bn' ? 'নিশ্চিত করুন' : 'Confirm delete'}</DialogTitle>
+                  <DialogDescription>
+                    {language === 'bn'
+                      ? 'আপনি কি নিশ্চিত যে এই ফাইলটি সম্পূর্ণ মুছে ফেলতে চান? এটি সার্ভার থেকে পুনরুদ্ধারযোগ্য নয়।'
+                      : 'Are you sure you want to permanently delete this file? This cannot be undone.'}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-4 flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setConfirmOpen(false); setFileToDelete(null); }}>{language === 'bn' ? 'বাতিল' : 'Cancel'}</Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => fileToDelete && performDelete(fileToDelete)}
+                    disabled={deletingFile === fileToDelete?.id}
+                  >
+                    {deletingFile === fileToDelete?.id ? <Loader2 className="h-4 w-4 animate-spin" /> : (language === 'bn' ? 'মুছুন' : 'Delete')}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Preview Dialog */}
             <Dialog open={previewOpen} onOpenChange={(open) => { if (!open) setPreviewFile(null); setPreviewOpen(open); }}>
