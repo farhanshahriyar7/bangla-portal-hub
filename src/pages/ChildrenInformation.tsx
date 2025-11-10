@@ -387,7 +387,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                 }).catch(() => {
                                     toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'পুনরুদ্ধার ব্যর্থ হয়েছে' : 'Failed to restore items', variant: 'destructive' });
                                 });
-                            }}
+                            }} 
                         >
                             {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
                         </Button>
