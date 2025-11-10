@@ -34,6 +34,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
+import * as XLSX from 'xlsx';
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +54,9 @@ import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { BreadcrumbList } from "@/components/ui/breadcrumb";
+import { supabase } from "@/integrations/supabase/client"; //backend integration
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; //backend integration
+
 
 interface ChildInfo {
     id: string;
@@ -69,7 +73,7 @@ interface ChildrenInformationProps {
 }
 
 const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationProps) => {
-    const [children, setChildren] = useState<ChildInfo[]>([]);
+    // const [children, setChildren] = useState<ChildInfo[]>([]); // removed for backend integration // local state to hold children data
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedChildren, setSelectedChildren] = useState<string[]>([]);
     const [editingChild, setEditingChild] = useState<ChildInfo | null>(null);
@@ -81,7 +85,122 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
     const { signOut } = useAuth();
     const [language, setLanguage] = useState<'bn' | 'en'>(initialLanguage);
 
-    // Form state
+
+    // backend integration   
+    const queryClient = useQueryClient();
+    const { data: session } = useQuery({
+        queryKey: ['session'],
+        queryFn: async () => {
+            const { data } = await supabase.auth.getSession();
+            return data.session;
+        }
+    });
+
+    const { data: children = [], isLoading } = useQuery({
+        queryKey: ['children-information'],
+        queryFn: async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabase as any)
+                .from('children_information')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Map DB rows (snake_case) to UI model (camelCase)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return (data || []).map((r: Record<string, any>) => ({
+                id: r.id,
+                fullName: r.full_name,
+                birthDate: r.birth_date ? new Date(r.birth_date) : undefined,
+                gender: r.gender,
+                age: r.age,
+                maritalStatus: r.marital_status,
+                specialStatus: r.special_status,
+            })) as ChildInfo[];
+        },
+        enabled: !!session
+    });
+
+
+    const addMutation = useMutation({
+        mutationFn: async (newChild: Omit<ChildInfo, 'id'>) => {
+            // map camelCase to snake_case for DB
+            const payload = {
+                full_name: newChild.fullName,
+                birth_date: newChild.birthDate ? format(newChild.birthDate, 'yyyy-MM-dd') : null,
+                gender: newChild.gender,
+                age: newChild.age,
+                marital_status: newChild.maritalStatus,
+                special_status: newChild.specialStatus,
+                user_id: session?.user?.id,
+            };
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabase as any)
+                .from('children_information')
+                .insert([payload])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['children-information'] });
+            toast({ title: language === 'bn' ? "সফলভাবে যোগ করা হয়েছে" : "Successfully added" });
+        }
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: async ({ id, ...updates }: ChildInfo) => {
+            // map camelCase to snake_case
+            const payload: Record<string, unknown> = {
+                full_name: updates.fullName,
+                birth_date: updates.birthDate ? format(updates.birthDate, 'yyyy-MM-dd') : null,
+                gender: updates.gender,
+                age: updates.age,
+                marital_status: updates.maritalStatus,
+                special_status: updates.specialStatus,
+            };
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabase as any)
+                .from('children_information')
+                .update(payload)
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['children-information'] });
+            toast({ title: language === 'bn' ? "সফলভাবে আপডেট করা হয়েছে" : "Successfully updated" });
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: async (ids: string[]) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error } = await (supabase as any)
+                .from('children_information')
+                .delete()
+                .in('id', ids);
+
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['children-information'] });
+        }
+    });
+
+
+    // NOTE: Mutations should be invoked from handlers (handleSave, handleDelete)
+
+
+    // Form state ..
     const [formData, setFormData] = useState({
         fullName: "",
         birthDate: undefined as Date | undefined,
@@ -174,8 +293,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
             return;
         }
 
-        const childData: ChildInfo = {
-            id: editingChild?.id || Date.now().toString(),
+        const payload = {
             fullName: formData.fullName,
             birthDate: formData.birthDate,
             gender: formData.gender,
@@ -185,21 +303,20 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         };
 
         if (editingChild) {
-            setChildren(children.map(c => c.id === editingChild.id ? childData : c));
-            toast({
-                title: language === 'bn' ? 'সফল' : 'Success',
-                description: language === 'bn' ? 'তথ্য আপডেট করা হয়েছে।' : 'Information updated successfully.',
+            updateMutation.mutate({ id: editingChild.id, ...payload }, {
+                onSuccess: () => {
+                    resetForm();
+                    setIsModalOpen(false);
+                }
             });
         } else {
-            setChildren([...children, childData]);
-            toast({
-                title: language === 'bn' ? 'সফল' : 'Success',
-                description: language === 'bn' ? 'নতুন তথ্য যোগ করা হয়েছে।' : 'New information added successfully.',
+            addMutation.mutate(payload as Omit<ChildInfo, 'id'>, {
+                onSuccess: () => {
+                    resetForm();
+                    setIsModalOpen(false);
+                }
             });
         }
-
-        resetForm();
-        setIsModalOpen(false);
     };
 
     const resetForm = () => {
@@ -242,31 +359,41 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         }
 
         const deletedItems = selectedChildren.length;
-        const tempDeleted = [...selectedChildren];
 
-        setChildren(children.filter(c => !selectedChildren.includes(c.id)));
-        setSelectedChildren([]);
+        // Keep the deleted records locally so we can support an "Undo" action if desired
+        const tempDeletedRecords = children.filter(c => selectedChildren.includes(c.id));
 
-        toast({
-            title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
-            description: language === 'bn' ? `${deletedItems} টি আইটেম মুছে ফেলা হয়েছে` : `${deletedItems} item(s) deleted`,
-            action: (
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                        // Restore deleted items
-                        const restoredChildren = children.filter(c => tempDeleted.includes(c.id));
-                        setChildren([...children, ...restoredChildren]);
-                        toast({
-                            title: language === 'bn' ? 'পুনরুদ্ধার করা হয়েছে' : 'Restored',
-                            description: language === 'bn' ? 'আইটেম পুনরুদ্ধার করা হয়েছে' : 'Items restored',
-                        });
-                    }}
-                >
-                    {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
-                </Button>
-            ),
+        deleteMutation.mutate(selectedChildren, {
+            onSuccess: () => {
+                setSelectedChildren([]);
+                toast({
+                    title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
+                    description: language === 'bn' ? `${deletedItems} টি আইটেম মুছে ফেলা হয়েছে` : `${deletedItems} item(s) deleted`,
+                    action: (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                // Re-insert deleted items (best-effort undo)
+                                Promise.all(tempDeletedRecords.map(r => addMutation.mutateAsync({
+                                    fullName: r.fullName,
+                                    birthDate: r.birthDate,
+                                    gender: r.gender,
+                                    age: r.age,
+                                    maritalStatus: r.maritalStatus,
+                                    specialStatus: r.specialStatus,
+                                }))).then(() => {
+                                    toast({ title: language === 'bn' ? 'পুনরুদ্ধার করা হয়েছে' : 'Restored', description: language === 'bn' ? 'আইটেম পুনরুদ্ধার করা হয়েছে' : 'Items restored' });
+                                }).catch(() => {
+                                    toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'পুনরুদ্ধার ব্যর্থ হয়েছে' : 'Failed to restore items', variant: 'destructive' });
+                                });
+                            }}
+                        >
+                            {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
+                        </Button>
+                    ),
+                });
+            }
         });
     };
 
@@ -416,7 +543,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                         <Trash2 className="h-4 w-4" />
                                         {t.delete}
                                     </Button>
-                                
+
                                     {/* Delete all */}
                                     {/* <Button onClick={handleDeleteAll} variant="destructive" className="hidden sm:inline-flex bg-red-950 hover:bg-red-900 text-white">
                                         {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
