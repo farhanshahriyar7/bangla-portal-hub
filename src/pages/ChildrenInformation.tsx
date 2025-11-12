@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Plus, Trash2, Download, Eye, Edit, Users, Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
@@ -73,7 +73,8 @@ interface ChildrenInformationProps {
 }
 
 const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationProps) => {
-    // const [children, setChildren] = useState<ChildInfo[]>([]); // removed for backend integration // local state to hold children data
+    // Ref to track pending deletes and their timeouts
+    const pendingDeletesRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedChildren, setSelectedChildren] = useState<string[]>([]);
     const [editingChild, setEditingChild] = useState<ChildInfo | null>(null);
@@ -81,7 +82,8 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
     const [deleteMode, setDeleteMode] = useState<'selected' | 'all' | null>(null);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [deleteAllLoading, setDeleteAllLoading] = useState(false);
-    const { toast } = useToast();
+    // Remove old undo state/timer logic
+    const { toast, dismiss } = useToast();
     const navigate = useNavigate();
     const { signOut } = useAuth();
     const [language, setLanguage] = useState<'bn' | 'en'>(initialLanguage);
@@ -97,7 +99,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         }
     });
 
-    const { data: children = [], isLoading } = useQuery({
+    const { data: rawChildren = [], isLoading } = useQuery({
         queryKey: ['children-information'],
         queryFn: async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -122,6 +124,9 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         },
         enabled: !!session
     });
+
+    // Filter out pending deletes so they are hidden from UI during undo window
+    const children = (rawChildren as ChildInfo[]).filter(c => !pendingDeletesRef.current.has(c.id));
 
 
     const addMutation = useMutation({
@@ -196,9 +201,6 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
             queryClient.invalidateQueries({ queryKey: ['children-information'] });
         }
     });
-
-
-    // NOTE: Mutations should be invoked from handlers (handleSave, handleDelete)
 
 
     // Form state ..
@@ -349,6 +351,59 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         setViewingChild(child);
     };
 
+    // Schedule delete for selected children (optimistic UI + undo window)
+    const scheduleDelete = (ids: string[]) => {
+        if (!ids || ids.length === 0) return;
+
+        // Optimistically remove from cache so UI hides them immediately
+        queryClient.setQueryData<ChildInfo[] | undefined>(['children-information'], (old) =>
+            (old || []).filter((c) => !ids.includes(c.id))
+        );
+
+        const delay = 15000; // 15s undo window
+        ids.forEach((id) => {
+            const pendingDeletes = pendingDeletesRef.current;
+            if (pendingDeletes.has(id)) {
+                clearTimeout(pendingDeletes.get(id)!);
+                pendingDeletes.delete(id);
+            }
+
+            const timeout = setTimeout(() => {
+                // perform backend delete after delay
+                deleteMutation.mutate([id], {
+                    onSuccess: () => {
+                        pendingDeletes.delete(id);
+                        queryClient.invalidateQueries({ queryKey: ['children-information'] });
+                    }
+                });
+            }, delay);
+
+            pendingDeletes.set(id, timeout);
+        });
+
+        // show toast with undo action
+        toast({
+            title: language === 'bn' ? 'আইটেম মুছে ফেলা হচ্ছে' : 'Item(s) scheduled for deletion',
+            description: language === 'bn' ? 'আপনি 15 সেকেন্ডের মধ্যে পূর্বাবস্থায় ফেরাতে পারবেন।' : 'You can undo within 15 seconds.',
+            action: (
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-black hover:bg-white hover:text-black"
+                    onClick={() => {
+                        ids.forEach((id) => undoDelete(id));
+                        // dismiss toasts if the toast system exposes dismiss
+                        if (typeof dismiss === 'function') dismiss();
+                    }}
+                >
+                    {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
+                </Button>
+            ),
+            variant: 'destructive',
+        });
+    };
+
+    // small wrapper so UI bindings keep working
     const handleDelete = () => {
         if (selectedChildren.length === 0) {
             toast({
@@ -358,44 +413,9 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
             });
             return;
         }
-
-        const deletedItems = selectedChildren.length;
-
-        // Keep the deleted records locally so we can support an "Undo" action if desired
-        const tempDeletedRecords = children.filter(c => selectedChildren.includes(c.id));
-
-        deleteMutation.mutate(selectedChildren, {
-            onSuccess: () => {
-                setSelectedChildren([]);
-                toast({
-                    title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
-                    description: language === 'bn' ? `${deletedItems} টি আইটেম মুছে ফেলা হয়েছে` : `${deletedItems} item(s) deleted`,
-                    action: (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                                // Re-insert deleted items (best-effort undo)
-                                Promise.all(tempDeletedRecords.map(r => addMutation.mutateAsync({
-                                    fullName: r.fullName,
-                                    birthDate: r.birthDate,
-                                    gender: r.gender,
-                                    age: r.age,
-                                    maritalStatus: r.maritalStatus,
-                                    specialStatus: r.specialStatus,
-                                }))).then(() => {
-                                    toast({ title: language === 'bn' ? 'পুনরুদ্ধার করা হয়েছে' : 'Restored', description: language === 'bn' ? 'আইটেম পুনরুদ্ধার করা হয়েছে' : 'Items restored' });
-                                }).catch(() => {
-                                    toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'পুনরুদ্ধার ব্যর্থ হয়েছে' : 'Failed to restore items', variant: 'destructive' });
-                                });
-                            }} 
-                        >
-                            {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
-                        </Button>
-                    ),
-                });
-            }
-        });
+        const ids = [...selectedChildren];
+        setSelectedChildren([]);
+        scheduleDelete(ids);
     };
 
     // Open confirmation for deleting all rows
@@ -481,6 +501,22 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         }
     };
 
+    // Undo a scheduled delete by id
+    const undoDelete = (id: string) => {
+        const pendingDeletes = pendingDeletesRef.current;
+        const timeout = pendingDeletes.get(id);
+        if (timeout) {
+            clearTimeout(timeout);
+            pendingDeletes.delete(id);
+            // backend still has the record, so refetch to restore it in UI
+            queryClient.invalidateQueries({ queryKey: ['children-information'] });
+            toast({
+                title: language === 'bn' ? 'পূর্বাবস্থায় ফিরেছে' : 'Restored',
+                description: language === 'bn' ? 'আইটেমটি পূর্বাবস্থায় ফেরানো হয়েছে' : 'Item restored',
+            });
+        }
+    };
+
     // Confirmed delete all handler
     const confirmDeleteAll = () => {
         setDeleteAllLoading(true);
@@ -490,45 +526,43 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
             setDeleteConfirmOpen(false);
             return;
         }
-        // Keep deleted records for undo
-        const tempDeletedRecords = [...children];
-        deleteMutation.mutate(allIds, {
-            onSuccess: () => {
-                setSelectedChildren([]);
-                setDeleteConfirmOpen(false);
-                setDeleteAllLoading(false);
-                toast({
-                    title: language === 'bn' ? 'সব মুছে ফেলা হয়েছে' : 'All Deleted',
-                    description: language === 'bn' ? `${allIds.length} টি তথ্য মুছে ফেলা হয়েছে` : `${allIds.length} item(s) deleted`,
-                    action: (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                                Promise.all(tempDeletedRecords.map(r => addMutation.mutateAsync({
-                                    fullName: r.fullName,
-                                    birthDate: r.birthDate,
-                                    gender: r.gender,
-                                    age: r.age,
-                                    maritalStatus: r.maritalStatus,
-                                    specialStatus: r.specialStatus,
-                                }))).then(() => {
-                                    toast({ title: language === 'bn' ? 'পুনরুদ্ধার করা হয়েছে' : 'Restored', description: language === 'bn' ? 'সব তথ্য পুনরুদ্ধার করা হয়েছে' : 'All items restored' });
-                                }).catch(() => {
-                                    toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'পুনরুদ্ধার ব্যর্থ হয়েছে' : 'Failed to restore items', variant: 'destructive' });
-                                });
-                            }}
-                        >
-                            {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
-                        </Button>
-                    ),
-                });
-            },
-            onError: () => {
-                setDeleteAllLoading(false);
-                setDeleteConfirmOpen(false);
-                toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'সব তথ্য মুছে ফেলা যায়নি' : 'Failed to delete all items', variant: 'destructive' });
+        // Optimistically remove all from UI
+        setSelectedChildren([]);
+        setDeleteConfirmOpen(false);
+        setDeleteAllLoading(false);
+        const delay = 15000;
+        allIds.forEach((id) => {
+            const pendingDeletes = pendingDeletesRef.current;
+            if (pendingDeletes.has(id)) {
+                clearTimeout(pendingDeletes.get(id)!);
+                pendingDeletes.delete(id);
             }
+            const timeout = setTimeout(() => {
+                deleteMutation.mutate([id], {
+                    onSuccess: () => {
+                        pendingDeletes.delete(id);
+                        queryClient.invalidateQueries({ queryKey: ['children-information'] });
+                    }
+                });
+            }, delay);
+            pendingDeletes.set(id, timeout);
+        });
+        toast({
+            title: language === 'bn' ? 'সব আইটেম মুছে ফেলা হচ্ছে' : 'All items scheduled for deletion',
+            description: language === 'bn' ? 'আপনি 15 সেকেন্ডের মধ্যে পূর্বাবস্থায় ফেরাতে পারবেন।' : 'You can undo within 15 seconds.',
+            action: (
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-black hover:bg-white hover:text-black"
+                    onClick={() => {
+                        allIds.forEach((id) => { undoDelete(id); });
+                    }}
+                >
+                    {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
+                </Button>
+            ),
+            variant: 'destructive',
         });
     };
 
