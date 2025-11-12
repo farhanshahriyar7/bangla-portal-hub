@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { Plus, Menu, Loader2, Trash2 } from "lucide-react";
@@ -29,13 +30,6 @@ interface MaritalStatusProps {
 // Type aliases
 type MaritalInformationRow = Database['public']['Tables']['marital_information']['Row'];
 type SpouseInformationRow = Database['public']['Tables']['spouse_information']['Row'];
-
-interface MaritalInformationWithSpouse extends MaritalInformationRow {
-    spouse_information?: SpouseInformationRow[];
-}
-
-// Form error type
-type FormError = PostgrestError | Error;
 
 const translations = {
     bn: {
@@ -161,7 +155,7 @@ const spouseSchema = z.object({
     }),
     nid: z.string({ required_error: "NID is required" })
         .refine((val) => /^\d{10,17}$/.test(val), "NID must be 10-17 digits"),
-    tin: z.string().optional(),
+    tin: z.string().min(1, "TIN is required"),
     district: z.string({ required_error: "District is required" }),
     // Employee-specific fields
     employeeId: z.string().optional(),
@@ -186,32 +180,15 @@ const spouseSchema = z.object({
     businessRegNumber: z.string().optional(),
 }).superRefine((data, ctx) => {
     if (data.occupation === "govtEmployee" || data.occupation === "privateEmployee") {
-        if (!data.employeeId?.trim()) {
+        // Accept employees if they provide either full employee details OR a valid TIN + district
+        const hasEmployeeDetails = !!(data.employeeId?.trim() && data.designation?.trim() && data.officeAddress?.trim() && data.officePhone?.trim());
+        const hasTinAndDistrict = !!(data.tin && data.tin.trim() && data.district && data.district.trim());
+
+        if (!hasEmployeeDetails && !hasTinAndDistrict) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: "Employee ID is required for employees",
+                message: "Please provide career details",
                 path: ["employeeId"],
-            });
-        }
-        if (!data.designation?.trim()) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Designation is required for employees",
-                path: ["designation"],
-            });
-        }
-        if (!data.officeAddress?.trim()) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Office address is required for employees",
-                path: ["officeAddress"],
-            });
-        }
-        if (!data.officePhone?.trim()) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Office phone is required for employees",
-                path: ["officePhone"],
             });
         }
     }
@@ -278,17 +255,25 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
             maritalStatus: undefined,
             spouses: [],
         },
-        mode: "onBlur",
+        mode: "onChange",
     });
+
+    // destructure form helpers we use so components re-render on formState changes
+    const { control, handleSubmit, watch, setValue, reset, setFocus, formState } = form;
 
     // Form states
     const [isEditing, setIsEditing] = useState(false);
+    // Indicates a saved/submitted record exists (either loaded or just saved)
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const maxSpouses = 4;
+
+    // Dialog states for confirmation modals
+    const [clearDialogOpen, setClearDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
     const clearForm = () => {
-        if (confirm(language === 'bn' ? 'আপনি কি ফরমটি পরিষ্কার করতে চান?' : 'Do you want to clear the form?')) {
-            form.reset({ maritalStatus: undefined, spouses: [] });
-            setIsEditing(false);
-        }
+        // open modal instead of native confirm or toast confirm
+        setClearDialogOpen(true);
     };
 
     type MaritalInformationWithSpouse = MaritalInformationRow & { spouse_information?: SpouseInformationRow[] };
@@ -336,25 +321,27 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                 businessRegNumber: spouse.business_reg_number,
             }));
 
-            form.reset({
+            reset({
                 maritalStatus: maritalData.marital_status,
                 spouses: mappedSpouses,
             });
-            setIsEditing(true);
+            // mark as a saved/submitted record
+            setIsEditing(false);
+            setIsSubmitted(true);
         }
-    }, [maritalData, form]);
+    }, [maritalData, reset]);
     // Save mutation
     const saveMutation = useMutation({
         mutationFn: async (formData: FormValues) => {
             if (!user) throw new Error('No user logged in');
 
-            // Upsert marital information
+            // Upsert marital information (use onConflict on user_id so existing record is updated)
             const { data: maritalInfo, error: maritalError } = await supabase
                 .from('marital_information')
                 .upsert({
                     user_id: user.id,
                     marital_status: formData.maritalStatus,
-                })
+                }, { onConflict: 'user_id' })
                 .select()
                 .single();
 
@@ -401,6 +388,9 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['marital-status'] });
+            // mark as saved so buttons and UI update
+            setIsSubmitted(true);
+            setIsEditing(false);
             toast({
                 title: t.success,
                 description: t.successDesc,
@@ -454,7 +444,9 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['marital-status'] });
-            form.reset({ maritalStatus: undefined, spouses: [] });
+            reset({ maritalStatus: undefined, spouses: [] });
+            setIsSubmitted(false);
+            setIsEditing(false);
             toast({
                 title: language === 'bn' ? 'মুছে ফেলা হয়েছে' : 'Deleted',
                 description: language === 'bn' ? 'বৈবাহিক তথ্য সফলভাবে মুছে ফেলা হয়েছে' : 'Marital information deleted successfully',
@@ -484,20 +476,25 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
     };
 
     const { fields, append, remove } = useFieldArray({
-        control: form.control,
+        control,
         name: "spouses",
     });
 
-    const maritalStatus = form.watch("maritalStatus");
+    const maritalStatus = watch("maritalStatus");
     const showSpouseFields = maritalStatus === "married" || maritalStatus === "divorced";
 
     // Form submission handler is defined in the backend integration section below
 
     const handleMaritalStatusChange = (value: string) => {
-        form.setValue("maritalStatus", value as 'married' | 'unmarried' | 'widow' | 'divorced' | 'widower');
+        setValue("maritalStatus", value as 'married' | 'unmarried' | 'widow' | 'divorced' | 'widower');
 
         // If switching to married/divorced and no spouse exists, add one
         if ((value === "married" || value === "divorced") && fields.length === 0) {
+            // ensure we don't exceed max
+            if (fields.length >= maxSpouses) {
+                toast({ title: language === 'bn' ? 'সর্বোচ্চ ৪টি ফর্ম অনুমোদিত' : 'Maximum 4 spouse forms allowed', variant: 'destructive' });
+                return;
+            }
             append({
                 name: "",
                 occupation: "other",
@@ -518,7 +515,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
 
         // If switching away from married/divorced, clear spouses
         if (value !== "married" && value !== "divorced") {
-            form.setValue("spouses", []);
+            setValue("spouses", []);
         }
     };
 
@@ -526,13 +523,47 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
     // backend integration (use react-query for loading/saving)
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // derived UI flags
+    const spouses = (watch('spouses') || []);
+    const spousesCount = spouses.length;
+
+    // compute counts per occupation for quick UI display
+    const occupationCounts: Record<string, number> = { govtEmployee: 0, privateEmployee: 0, business: 0, housewife: 0, other: 0 };
+    spouses.forEach((s: Partial<{ occupation?: string }>) => {
+        const occ = (s?.occupation as string) || 'other';
+        if (occ in occupationCounts) {
+            (occupationCounts as Record<string, number>)[occ] += 1;
+        } else {
+            occupationCounts.other += 1;
+        }
+    });
+
+    type SpouseFormItem = { name?: string | null; tin?: string | null; district?: string | null };
+
+    // manual required-check: when spouse fields are visible we require name, tin and district for each spouse
+    const spouseFieldsFilled = !showSpouseFields || (spousesCount > 0 && spouses.every((s: SpouseFormItem) => ((s?.name || '')?.toString().trim().length ?? 0) > 0 && ((s?.tin || '')?.toString().trim().length ?? 0) > 0 && ((s?.district || '')?.toString().trim().length ?? 0) > 0));
+
+    const canSubmit = !isSubmitting && (!isSubmitted || isEditing) && spousesCount <= maxSpouses && spouseFieldsFilled && !!watch('maritalStatus');
+    const clearDisabled = isSubmitted || (!formState.isDirty && !isEditing);
+    const deleteDisabled = deleteMutation.status === 'pending' || !(maritalData?.id || isSubmitted);
+    const addDisabled = (isSubmitted && !isEditing) || spousesCount >= maxSpouses;
+
     // onSubmit delegates saving to the existing react-query mutation `saveMutation`
     const onSubmit = async (data: FormValues) => {
         if (!user) return;
+
+        // enforce max spouses before calling server
+        if (data.spouses && data.spouses.length > maxSpouses) {
+            toast({ title: language === 'bn' ? 'সর্বোচ্চ ৪টি ফর্ম জমা দিতে পারবেন' : 'Cannot submit more than 4 spouse forms', variant: 'destructive' });
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             await saveMutation.mutateAsync(data);
-            setIsEditing(true);
+            // mark submitted state handled in onSuccess of mutation; but ensure local state as well
+            setIsSubmitted(true);
+            setIsEditing(false);
         } catch (err) {
             // error handled in mutation onError, but log here as well
             console.error('Error saving marital data:', err);
@@ -573,10 +604,10 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                     <main className="flex-1 p-6 overflow-auto">
                         <CardHeader>
                             <CardTitle>{t.title}</CardTitle>
-                            <CardDescription>
+                            <CardDescription className="text-red-700 font-extrabold text-base">
                                 {language === 'bn'
-                                    ? 'আপনার বৈবাহিক তথ্য এবং স্বামী/স্ত্রীর বিবরণ প্রদান করুন'
-                                    : 'Provide your marital information and spouse details'}
+                                    ? '*আপনার বৈবাহিক তথ্য এবং স্বামী/স্ত্রীর বিবরণ প্রদান করুন । সমস্ত প্রয়োজনীয় ক্ষেত্র পূরণ না করা পর্যন্ত আপনি ফর্মটি সংরক্ষণ করতে পারবেন না। সঠিক তথ্য প্রদান করুন। সর্বোচ্চ ৪টি স্বামী/স্ত্রীর তথ্য প্রদান করা যাবে।'
+                                    : '*Provide your marital information and spouse details. You cant save the form unless all required fields are filled. Please provide accurate information. A maximum of 4 spouse entries are allowed.'}
                             </CardDescription>
                         </CardHeader>
                         <div className="max-w-7xl mx-auto">
@@ -584,12 +615,12 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                 <CardContent>
                                     <Form {...form}>
                                         <form
-                                            onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                                            onSubmit={handleSubmit(onSubmit, (errors) => {
                                                 const firstErrorPath = Object.keys(errors)[0];
                                                 if (firstErrorPath) {
                                                     try {
                                                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                                        form.setFocus(firstErrorPath as any);
+                                                        setFocus(firstErrorPath as any);
                                                         const el = document.querySelector(`[name="${firstErrorPath}"]`) as HTMLElement | null;
                                                         if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                                     } catch (e) {
@@ -633,27 +664,52 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                             {showSpouseFields && (
                                                 <div className="space-y-6">
                                                     <div className="flex items-center justify-between">
-                                                        <h3 className="text-lg font-semibold">{t.spouseInformation}</h3>
+                                                        <div className="flex items-center gap-4">
+                                                            <h3 className="text-lg font-semibold">{t.spouseInformation}</h3>
+                                                            <div className="text-sm text-muted-foreground hidden sm:block">
+                                                                <div className="flex gap-5">
+                                                                    {/* when 0 to 1 the color will be green then 2 the color will be light green then 3 the color will be light red then 4 the color will be dark red */}
+                                                                    <span className={`font-bold ${spousesCount === 0 ? 'text-green-700' : spousesCount === 1 ? 'text-green-600' : spousesCount === 2 ? 'text-yellow-600' : spousesCount === 3 ? 'text-red-600' : 'text-red-900'}`}>
+                                                                        {language === 'bn' ? `সংখ্যা: ${spousesCount}/${maxSpouses}` : `Spouses: ${spousesCount}/${maxSpouses}`}
+                                                                    </span>
+                                                                    <div className="flex gap-2 mt-1 flex-wrap">
+                                                                        <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{t.govtEmployee}: {occupationCounts.govtEmployee}</span>
+                                                                        <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{t.privateEmployee}: {occupationCounts.privateEmployee}</span>
+                                                                        <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{t.business}: {occupationCounts.business}</span>
+                                                                        <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{t.housewife}: {occupationCounts.housewife}</span>
+                                                                        <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{t.other}: {occupationCounts.other}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                         <Button
                                                             type="button"
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => append({
-                                                                name: "",
-                                                                occupation: "other",
-                                                                nid: "",
-                                                                tin: "",
-                                                                district: "",
-                                                                employeeId: "",
-                                                                designation: "",
-                                                                officeAddress: "",
-                                                                officePhone: "",
-                                                                businessName: "",
-                                                                businessType: "",
-                                                                businessAddress: "",
-                                                                businessPhone: "",
-                                                                businessRegNumber: "",
-                                                            })}
+                                                            disabled={addDisabled}
+                                                            onClick={() => {
+                                                                if (addDisabled) {
+                                                                    toast({ title: language === 'bn' ? 'সর্বোচ্চ ৪টি ফর্ম অনুমোদিত' : 'Maximum 4 spouse forms allowed', variant: 'destructive' });
+                                                                    return;
+                                                                }
+
+                                                                append({
+                                                                    name: "",
+                                                                    occupation: "other",
+                                                                    nid: "",
+                                                                    tin: "",
+                                                                    district: "",
+                                                                    employeeId: "",
+                                                                    designation: "",
+                                                                    officeAddress: "",
+                                                                    officePhone: "",
+                                                                    businessName: "",
+                                                                    businessType: "",
+                                                                    businessAddress: "",
+                                                                    businessPhone: "",
+                                                                    businessRegNumber: "",
+                                                                });
+                                                            }}
                                                         >
                                                             <Plus className="h-4 w-4 mr-2" />
                                                             {t.addSpouse}
@@ -661,7 +717,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                     </div>
 
                                                     {fields.map((field, index) => {
-                                                        const occupation = form.watch(`spouses.${index}.occupation`);
+                                                        const occupation = watch(`spouses.${index}.occupation`);
                                                         const isGovtEmployee = occupation === "govtEmployee";
                                                         const isPrivateEmployee = occupation === "privateEmployee";
                                                         const isBusiness = occupation === "business";
@@ -982,9 +1038,24 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                     className="bg-black text-white hover:bg-gray-800"
                                                     size="lg"
                                                     onClick={() => clearForm()}
+                                                    disabled={clearDisabled}
                                                 >
                                                     {language === 'bn' ? 'ফরম পরিষ্কার করুন' : 'Clear Form'}
                                                 </Button>
+                                                {isSubmitted && !isEditing && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        size="lg"
+                                                        onClick={() => {
+                                                            // enable editing of the saved submission
+                                                            setIsEditing(true);
+                                                            setIsSubmitted(false);
+                                                        }}
+                                                    >
+                                                        {language === 'bn' ? 'সম্পাদনা' : 'Edit'}
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     type="button"
                                                     variant="destructive"
@@ -995,19 +1066,16 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                             return;
                                                         }
 
+                                                        // If there is no saved marital record, offer to clear the form via the clear modal
                                                         if (!maritalData?.id) {
-                                                            // nothing to delete
-                                                            if (!confirm(language === 'bn' ? 'আপনি নিশ্চিতভাবে কোন তথ্য নেই, ফর্ম রিসেট করতে চান?' : 'No saved marital record found. Clear the form?')) return;
-                                                            form.reset({ maritalStatus: undefined, spouses: [] });
+                                                            setClearDialogOpen(true);
                                                             return;
                                                         }
 
-                                                        const message = language === 'bn' ? 'আপনি কি নিশ্চিতভাবে এই তথ্যগুলো মুছে ফেলতে চান?' : 'Are you sure you want to permanently delete this marital information?';
-                                                        if (!confirm(message)) return;
-
-                                                        deleteMutation.mutate();
+                                                        // otherwise open delete confirmation modal
+                                                        setDeleteDialogOpen(true);
                                                     }}
-                                                    disabled={deleteMutation.status === 'pending'}
+                                                    disabled={deleteDisabled}
                                                 >
                                                     {deleteMutation.status === 'pending' ? (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1016,11 +1084,11 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                     )}
                                                 </Button>
 
-                                                <Button type="submit" size="lg" disabled={isSubmitting || saveMutation.status === 'pending'}>
+                                                <Button type="submit" size="lg" disabled={!canSubmit || saveMutation.status === 'pending'}>
                                                     {isSubmitting || saveMutation.status === 'pending' ? (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
                                                     ) : (
-                                                        t.save
+                                                        isEditing ? (language === 'bn' ? 'আপডেট' : 'Update') : t.save
                                                     )}
                                                 </Button>
 
@@ -1033,6 +1101,68 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                     </main>
                 </div>
             </div>
+
+            {/* Confirmation Dialogs */}
+            <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{language === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?'}</DialogTitle>
+                        <DialogDescription>
+                            {language === 'bn' ? 'আপনি কি ফরমটি পরিষ্কার করতে চান?' : 'Do you want to clear the form?'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="mt-4 flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
+                            {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                        </Button>
+                        <Button className="bg-black text-white" onClick={() => {
+                            reset({ maritalStatus: undefined, spouses: [] });
+                            setIsEditing(false);
+                            setIsSubmitted(false);
+                            setClearDialogOpen(false);
+                            toast({ title: language === 'bn' ? 'ফরম পরিষ্কার করা হয়েছে' : 'Form cleared' });
+                        }}>
+                            {language === 'bn' ? 'হ্যাঁ' : 'Yes'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{language === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?'}</DialogTitle>
+                        <DialogDescription>
+                            {maritalData?.id
+                                ? (language === 'bn' ? 'আপনি কি নিশ্চিতভাবে এই তথ্যগুলো মুছে ফেলতে চান?' : 'Are you sure you want to permanently delete this marital information?')
+                                : (language === 'bn' ? 'কোনো সংরক্ষিত রেকর্ড নেই. ফরম রিসেট করতে চান?' : 'No saved marital record found. Clear the form?')}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="mt-4 flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                            {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                        </Button>
+                        <Button className={maritalData?.id ? "bg-destructive text-white" : "bg-black text-white"} onClick={() => {
+                            setDeleteDialogOpen(false);
+                            if (!maritalData?.id) {
+                                reset({ maritalStatus: undefined, spouses: [] });
+                                setIsEditing(false);
+                                setIsSubmitted(false);
+                                toast({ title: language === 'bn' ? 'ফরম রিসেট করা হয়েছে' : 'Form cleared' });
+                                return;
+                            }
+
+                            // perform delete
+                            deleteMutation.mutate();
+                        }}>
+                            {language === 'bn' ? 'হ্যাঁ' : 'Yes'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
         </SidebarProvider>
     );
 };
