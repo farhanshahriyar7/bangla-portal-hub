@@ -82,6 +82,7 @@ const translations = {
         save: "সংরক্ষণ করুন",
         success: "সফলভাবে সংরক্ষিত হয়েছে",
         successDesc: "বৈবাহিক তথ্য সফলভাবে সংরক্ষিত হয়েছে",
+        maritalStatusRequired: "আপনাকে অন্তত একটি স্ট্যাটাস যোগ করতে হবে। প্রত্যাশিত: 'বিবাহিত' | 'অবিবাহিত' | 'বিধবা' | 'তালাকপ্রাপ্ত' | 'বিপত্নীক'",
     },
     en: {
         title: "Marital Status",
@@ -133,6 +134,7 @@ const translations = {
         save: "Save",
         success: "Successfully Saved",
         successDesc: "Marital information has been saved successfully",
+        maritalStatusRequired: "You have to add the status atleast. Expected 'married' | 'unmarried' | 'widow' | 'divorced' | 'widower', received ''",
     },
 };
 
@@ -187,7 +189,7 @@ const spouseSchema = z.object({
         if (!hasEmployeeDetails && !hasTinAndDistrict) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: "Please provide career details",
+                message: "Please provide this details carefully",
                 path: ["employeeId"],
             });
         }
@@ -234,7 +236,8 @@ const spouseSchema = z.object({
 
 const formSchema = z.object({
     maritalStatus: z.enum(["married", "unmarried", "widow", "divorced", "widower"], {
-        required_error: "Marital status is required",
+        required_error: "You have to add the status atleast. Expected 'married' | 'unmarried' | 'widow' | 'divorced' | 'widower', received ''",
+        invalid_type_error: "You have to add the status atleast. Expected 'married' | 'unmarried' | 'widow' | 'divorced' | 'widower', received ''",
     }),
     spouses: z.array(spouseSchema).optional(),
 });
@@ -729,10 +732,11 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                         type="button"
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        className="absolute top-2 right-2"
+                                                                        className="absolute top-2 right-5 hover:bg-red-100"
+                                                                        disabled={isSubmitted && !isEditing}
                                                                         onClick={() => remove(index)}
                                                                     >
-                                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                                        <Trash2 className="h-4 w-4 text-red-700 " />
                                                                     </Button>
                                                                 )}
 
@@ -744,7 +748,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                             <FormItem className="md:col-span-2">
                                                                                 <FormLabel>{t.spouseName} *</FormLabel>
                                                                                 <FormControl>
-                                                                                    <Input placeholder={t.spouseNamePlaceholder} {...field} />
+                                                                                    <Input placeholder={t.spouseNamePlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                 </FormControl>
                                                                                 <FormMessage />
                                                                             </FormItem>
@@ -757,7 +761,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                         render={({ field }) => (
                                                                             <FormItem>
                                                                                 <FormLabel>{t.occupation}</FormLabel>
-                                                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                                                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitted && !isEditing}>
                                                                                     <FormControl>
                                                                                         <SelectTrigger>
                                                                                             <SelectValue placeholder={t.occupationPlaceholder} />
@@ -782,7 +786,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                         render={({ field }) => (
                                                                             <FormItem>
                                                                                 <FormLabel>{t.district}</FormLabel>
-                                                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                                                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitted && !isEditing}>
                                                                                     <FormControl>
                                                                                         <SelectTrigger>
                                                                                             <SelectValue placeholder={t.districtPlaceholder} />
@@ -808,7 +812,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                             <FormItem>
                                                                                 <FormLabel>{t.nid}</FormLabel>
                                                                                 <FormControl>
-                                                                                    <Input placeholder={t.nidPlaceholder} {...field} />
+                                                                                    <Input placeholder={t.nidPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                 </FormControl>
                                                                                 <FormMessage />
                                                                             </FormItem>
@@ -822,7 +826,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                             <FormItem>
                                                                                 <FormLabel>{t.tin}</FormLabel>
                                                                                 <FormControl>
-                                                                                    <Input placeholder={t.tinPlaceholder} {...field} />
+                                                                                    <Input placeholder={t.tinPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                 </FormControl>
                                                                                 <FormMessage />
                                                                             </FormItem>
@@ -838,7 +842,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem>
                                                                                         <FormLabel>{t.employeeId}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.employeeIdPlaceholder} {...field} />
+                                                                                            <Input placeholder={t.employeeIdPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -852,7 +856,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem>
                                                                                         <FormLabel>{t.designation}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.designationPlaceholder} {...field} />
+                                                                                            <Input placeholder={t.designationPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -866,7 +870,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem className="md:col-span-2">
                                                                                         <FormLabel>{t.officeAddress}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.officeAddressPlaceholder} {...field} />
+                                                                                            <Input placeholder={t.officeAddressPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -880,7 +884,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem>
                                                                                         <FormLabel>{t.officePhone}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.officePhonePlaceholder} {...field} />
+                                                                                            <Input placeholder={t.officePhonePlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -899,7 +903,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                         <FormItem>
                                                                                             <FormLabel>{t.employeeId}</FormLabel>
                                                                                             <FormControl>
-                                                                                                <Input placeholder={t.employeeIdPlaceholder} {...field} />
+                                                                                                <Input placeholder={t.employeeIdPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                             </FormControl>
                                                                                             <FormMessage />
                                                                                         </FormItem>
@@ -913,7 +917,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                         <FormItem>
                                                                                             <FormLabel>{t.designation}</FormLabel>
                                                                                             <FormControl>
-                                                                                                <Input placeholder={t.designationPlaceholder} {...field} />
+                                                                                                <Input placeholder={t.designationPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                             </FormControl>
                                                                                             <FormMessage />
                                                                                         </FormItem>
@@ -927,7 +931,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                         <FormItem className="md:col-span-2">
                                                                                             <FormLabel>{t.officeAddress}</FormLabel>
                                                                                             <FormControl>
-                                                                                                <Input placeholder={t.officeAddressPlaceholder} {...field} />
+                                                                                                <Input placeholder={t.officeAddressPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                             </FormControl>
                                                                                             <FormMessage />
                                                                                         </FormItem>
@@ -941,7 +945,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                         <FormItem>
                                                                                             <FormLabel>{t.officePhone}</FormLabel>
                                                                                             <FormControl>
-                                                                                                <Input placeholder={t.officePhonePlaceholder} {...field} />
+                                                                                                <Input placeholder={t.officePhonePlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                             </FormControl>
                                                                                             <FormMessage />
                                                                                         </FormItem>
@@ -960,7 +964,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem className="md:col-span-2">
                                                                                         <FormLabel>{t.businessName}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.businessNamePlaceholder} {...field} />
+                                                                                            <Input placeholder={t.businessNamePlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -974,7 +978,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem>
                                                                                         <FormLabel>{t.businessType}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.businessTypePlaceholder} {...field} />
+                                                                                            <Input placeholder={t.businessTypePlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -988,7 +992,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem className="md:col-span-2">
                                                                                         <FormLabel>{t.businessAddress}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.businessAddressPlaceholder} {...field} />
+                                                                                            <Input placeholder={t.businessAddressPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -1002,7 +1006,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem>
                                                                                         <FormLabel>{t.businessRegNumber}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.businessRegNumberPlaceholder} {...field} />
+                                                                                            <Input placeholder={t.businessRegNumberPlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
@@ -1016,7 +1020,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                                                     <FormItem>
                                                                                         <FormLabel>{t.businessPhone}</FormLabel>
                                                                                         <FormControl>
-                                                                                            <Input placeholder={t.businessPhonePlaceholder} {...field} />
+                                                                                            <Input placeholder={t.businessPhonePlaceholder} {...field} disabled={isSubmitted && !isEditing} />
                                                                                         </FormControl>
                                                                                         <FormMessage />
                                                                                     </FormItem>
