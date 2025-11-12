@@ -80,6 +80,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
     const [viewingChild, setViewingChild] = useState<ChildInfo | null>(null);
     const [deleteMode, setDeleteMode] = useState<'selected' | 'all' | null>(null);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteAllLoading, setDeleteAllLoading] = useState(false);
     const { toast } = useToast();
     const navigate = useNavigate();
     const { signOut } = useAuth();
@@ -217,7 +218,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         subtext: language === 'bn' ? 'অনুগ্রহ করে আপনার তথ্য সঠিক এবং সম্পূর্ণরূপে আপডেট করুন।' : 'Please update your information accurately and completely.',
         addNew: language === 'bn' ? '+ নতুন তথ্য' : '+ Add New Information',
         delete: language === 'bn' ? 'মুছুন' : 'Delete',
-        massDelete: language === 'bn' ? 'মাস মুছুন' : 'Mass Delete',
+    massDelete: language === 'bn' ? 'সব মুছুন' : 'Delete All',
         download: language === 'bn' ? 'ডাউনলোড' : 'Download',
         fullName: language === 'bn' ? 'পূর্ণ নাম' : 'Full Name',
         birthDate: language === 'bn' ? 'জন্ম তারিখ' : 'Date of Birth',
@@ -399,6 +400,14 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
 
     // Open confirmation for deleting all rows
     const handleDeleteAll = () => {
+        if (children.length === 0) {
+            toast({
+                title: language === 'bn' ? 'সতর্কতা' : 'Warning',
+                description: language === 'bn' ? 'মুছে ফেলার জন্য কোন তথ্য নেই।' : 'No data to delete.',
+                variant: "destructive",
+            });
+            return;
+        }
         setDeleteMode('all');
         setDeleteConfirmOpen(true);
     };
@@ -472,6 +481,57 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         }
     };
 
+    // Confirmed delete all handler
+    const confirmDeleteAll = () => {
+        setDeleteAllLoading(true);
+        const allIds = children.map(c => c.id);
+        if (allIds.length === 0) {
+            setDeleteAllLoading(false);
+            setDeleteConfirmOpen(false);
+            return;
+        }
+        // Keep deleted records for undo
+        const tempDeletedRecords = [...children];
+        deleteMutation.mutate(allIds, {
+            onSuccess: () => {
+                setSelectedChildren([]);
+                setDeleteConfirmOpen(false);
+                setDeleteAllLoading(false);
+                toast({
+                    title: language === 'bn' ? 'সব মুছে ফেলা হয়েছে' : 'All Deleted',
+                    description: language === 'bn' ? `${allIds.length} টি তথ্য মুছে ফেলা হয়েছে` : `${allIds.length} item(s) deleted`,
+                    action: (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                Promise.all(tempDeletedRecords.map(r => addMutation.mutateAsync({
+                                    fullName: r.fullName,
+                                    birthDate: r.birthDate,
+                                    gender: r.gender,
+                                    age: r.age,
+                                    maritalStatus: r.maritalStatus,
+                                    specialStatus: r.specialStatus,
+                                }))).then(() => {
+                                    toast({ title: language === 'bn' ? 'পুনরুদ্ধার করা হয়েছে' : 'Restored', description: language === 'bn' ? 'সব তথ্য পুনরুদ্ধার করা হয়েছে' : 'All items restored' });
+                                }).catch(() => {
+                                    toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'পুনরুদ্ধার ব্যর্থ হয়েছে' : 'Failed to restore items', variant: 'destructive' });
+                                });
+                            }}
+                        >
+                            {language === 'bn' ? 'পূর্বাবস্থা' : 'Undo'}
+                        </Button>
+                    ),
+                });
+            },
+            onError: () => {
+                setDeleteAllLoading(false);
+                setDeleteConfirmOpen(false);
+                toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'সব তথ্য মুছে ফেলা যায়নি' : 'Failed to delete all items', variant: 'destructive' });
+            }
+        });
+    };
+
     return (
         <SidebarProvider>
             <div className="min-h-screen w-full bg-background flex">
@@ -543,17 +603,42 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
                                         <Trash2 className="h-4 w-4" />
                                         {t.delete}
                                     </Button>
-
-                                    {/* Delete all */}
-                                    {/* <Button onClick={handleDeleteAll} variant="destructive" className="hidden sm:inline-flex bg-red-950 hover:bg-red-900 text-white">
-                                        {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
-                                    </Button> */}
-
+                                    <Button
+                                        onClick={handleDeleteAll}
+                                        variant="destructive"
+                                        className="bg-red-950 hover:bg-red-900 text-white"
+                                        disabled={children.length === 0 || deleteAllLoading}
+                                    >
+                                        {t.massDelete}
+                                    </Button>
                                     {/* <Button variant="outline" onClick={handleDownload} disabled className="gap-2">
                                         <Download className="h-4 w-4" />
                                         {t.download}
                                     </Button> */}
                                 </div>
+                            {/* Delete All Confirmation Dialog */}
+                            <Dialog open={deleteConfirmOpen} onOpenChange={(open) => { if (!open) setDeleteConfirmOpen(false); }}>
+                                <DialogContent className="max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle>{language === 'bn' ? 'সব তথ্য মুছে ফেলবেন?' : 'Delete All Information?'}</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                        <p className="text-lg font-medium">
+                                            {language === 'bn'
+                                                ? `আপনি কি নিশ্চিতভাবে ${children.length} টি তথ্য মুছে ফেলতে চান?`
+                                                : `Are you sure you want to delete all ${children.length} items?`}
+                                        </p>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={deleteAllLoading}>
+                                            {language === 'bn' ? 'বাতিল করুন' : 'Cancel'}
+                                        </Button>
+                                        <Button variant="destructive" onClick={confirmDeleteAll} disabled={deleteAllLoading}>
+                                            {language === 'bn' ? 'সব মুছুন' : 'Delete All'}
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                             </div>
 
                             <Card className="overflow-hidden">
