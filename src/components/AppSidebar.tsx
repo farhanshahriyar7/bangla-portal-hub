@@ -240,7 +240,7 @@ export function AppSidebar({
             {language === 'bn' ? 'গেজেটেড সরকারি কর্মচারীগণ' : 'Gazetted Govt. Employees'}
           </p>
           <p className="text-xs text-muted-foreground truncate">
-            Employeer View
+            {isAdminMode ? (language === 'bn' ? 'অ্যাডমিন ভিউ' : 'Admin View') : (language === 'bn' ? 'কর্মচারী ভিউ' : 'Employee View')}
           </p>
         </div>
       </div> : <div className="flex justify-center">
