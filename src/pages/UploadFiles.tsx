@@ -307,16 +307,16 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
               uploaded_at: new Date().toISOString()
             } as any;
 
-          const { error: insertError } = await supabase.from('uploaded_files').insert(record);
-          if (insertError) {
-            // non-fatal: notify and continue
-            console.error('DB insert error', insertError);
-            toast({
-              title: language === 'bn' ? 'ওয়ার্নিং' : 'Warning',
-              description: language === 'bn' ? 'ফাইল আপলোড হয়েছে কিন্তু রেকর্ড তৈরি করা যায়নি' : 'File uploaded but DB record could not be created',
-              variant: 'destructive',
-            });
-          }
+          // Database operations commented out - uploaded_files table not yet created
+          // const { error: insertError } = await supabase.from('uploaded_files').insert(record);
+          // if (insertError) {
+          //   console.error('DB insert error', insertError);
+          //   toast({
+          //     title: language === 'bn' ? 'ওয়ার্নিং' : 'Warning',
+          //     description: language === 'bn' ? 'ফাইল আপলোড হয়েছে কিন্তু রেকর্ড তৈরি করা যায়নি' : 'File uploaded but DB record could not be created',
+          //     variant: 'destructive',
+          //   });
+          // }
 
           // update the saved file entry with storage path and mark completed
           setUploadedFiles((prev) => prev.map(f => f.id === uf.id ? { ...f, storagePath: path, uploadProgress: { progress: 100, status: 'completed' } } : f));
@@ -364,37 +364,38 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
     let mounted = true;
     const fetchUploads = async () => {
       try {
-        const { data, error } = await supabase
-          .from('uploaded_files')
-          .select('id, name, path, size, content_type, uploaded_at')
-          .order('uploaded_at', { ascending: false })
-          .limit(200);
+        // Database operations commented out - uploaded_files table not yet created
+        // const { data, error } = await supabase
+        //   .from('uploaded_files')
+        //   .select('id, name, path, size, content_type, uploaded_at')
+        //   .order('uploaded_at', { ascending: false })
+        //   .limit(200);
 
-        if (error) {
-          console.error('Failed to fetch uploaded_files', error);
-          toast({
-            title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
-            description: language === 'bn' ? 'আপলোডকৃত ফাইল লোড করা যায়নি' : 'Failed to load uploaded files',
-            variant: 'destructive'
-          });
-          return;
-        }
+        // if (error) {
+        //   console.error('Failed to fetch uploaded_files', error);
+        //   toast({
+        //     title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
+        //     description: language === 'bn' ? 'আপলোডকৃত ফাইল লোড করা যায়নি' : 'Failed to load uploaded files',
+        //     variant: 'destructive'
+        //   });
+        //   return;
+        // }
 
-        if (!mounted || !data) return;
+        // if (!mounted || !data) return;
 
-        const rows = (data as Array<any>).map((r) => ({
-          id: String(r.id),
-          name: r.name,
-          size: formatFileSize(Number(r.size) || 0),
-          sizeBytes: Number(r.size) || 0,
-          type: r.content_type || 'application/octet-stream',
-          uploadedAt: new Date(r.uploaded_at).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-US'),
-          storagePath: r.path,
-          uploadProgress: { progress: 100, status: 'completed' as const }
-        } as UploadedFile));
+        // const rows = (data as Array<any>).map((r) => ({
+        //   id: String(r.id),
+        //   name: r.name,
+        //   size: formatFileSize(Number(r.size) || 0),
+        //   sizeBytes: Number(r.size) || 0,
+        //   type: r.content_type || 'application/octet-stream',
+        //   uploadedAt: new Date(r.uploaded_at).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-US'),
+        //   storagePath: r.path,
+        //   uploadProgress: { progress: 100, status: 'completed' as const }
+        // } as UploadedFile));
 
         // Set fetched uploads as initial list
-        setUploadedFiles((prev) => [...rows, ...prev]);
+        // setUploadedFiles((prev) => [...rows, ...prev]);
       } catch (err) {
         console.error('Error fetching uploads', err);
       } finally {
@@ -448,35 +449,34 @@ export default function UploadFiles({ language: initialLanguage = 'en' }: Upload
         }
       }
 
-      // Delete DB record. Prefer path if available, otherwise try id.
-      try {
-        let dbDelete;
-        if (path) {
-          dbDelete = await supabase.from('uploaded_files').delete().eq('path', path);
-        } else {
-          dbDelete = await supabase.from('uploaded_files').delete().eq('id', file.id);
-        }
-
-        if ((dbDelete as any).error) {
-          console.error('DB delete error', (dbDelete as any).error);
-          toast({
-            title: language === 'bn' ? 'ওয়ার্নিং' : 'Warning',
-            description: language === 'bn'
-              ? 'ডাটাবেস থেকে রেকর্ড মুছে ফেলা যায়নি।'
-              : 'Could not remove DB record.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      } catch (err) {
-        console.error('DB delete exception', err);
-        toast({
-          title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
-          description: language === 'bn' ? 'ডাটাবেস অপসারণে ত্রুটি ঘটেছে' : 'Error removing DB record',
-          variant: 'destructive',
-        });
-        return;
-      }
+      // Database operations commented out - uploaded_files table not yet created
+      // try {
+      //   let dbDelete;
+      //   if (path) {
+      //     dbDelete = await supabase.from('uploaded_files').delete().eq('path', path);
+      //   } else {
+      //     dbDelete = await supabase.from('uploaded_files').delete().eq('id', file.id);
+      //   }
+      //   if ((dbDelete as any).error) {
+      //     console.error('DB delete error', (dbDelete as any).error);
+      //     toast({
+      //       title: language === 'bn' ? 'ওয়ার্নিং' : 'Warning',
+      //       description: language === 'bn'
+      //         ? 'ডাটাবেস থেকে রেকর্ড মুছে ফেলা যায়নি।'
+      //         : 'Could not remove DB record.',
+      //       variant: 'destructive',
+      //     });
+      //     return;
+      //   }
+      // } catch (err) {
+      //   console.error('DB delete exception', err);
+      //   toast({
+      //     title: language === 'bn' ? 'ত্রুটি!' : 'Error!',
+      //     description: language === 'bn' ? 'ডাটাবেস অপসারণে ত্রুটি ঘটেছে' : 'Error removing DB record',
+      //     variant: 'destructive',
+      //   });
+      //   return;
+      // }
 
       // Success: revoke preview URL and remove from UI
       if (file.previewUrl) {

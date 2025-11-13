@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Home, User, FileText, Calendar, Upload, Download, Shield, Settings, Bell, LogOut, Building2, ChevronDown, Users } from "lucide-react";
+import { Home, User, FileText, Calendar, Upload, Download, Shield, Settings, Bell, LogOut, Building2, ChevronDown, Users, UserCog, Database, BarChart3 } from "lucide-react";
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
@@ -8,6 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface AppSidebarProps {
   language: 'bn' | 'en';
@@ -46,6 +49,15 @@ export function AppSidebar({
     { title: language === 'bn' ? 'নিরাপত্তা' : 'Security', url: '/security', icon: Shield as IconType, section: 'security' },
     { title: language === 'bn' ? 'সেটিংস' : 'Settings', url: '/settings', icon: Settings as IconType, section: 'settings' },
   ]);
+
+  // Admin menu items
+  const adminMenuItems: Array<{ title: string; url: string; icon: IconType; section: string }> = [
+    { title: language === 'bn' ? 'ব্যবহারকারী ব্যবস্থাপনা' : 'User Management', url: '/admin/users', icon: UserCog as IconType, section: 'admin-users' },
+    { title: language === 'bn' ? 'ডাটাবেস ব্যবস্থাপনা' : 'Database Management', url: '/admin/database', icon: Database as IconType, section: 'admin-database' },
+    { title: language === 'bn' ? 'রিপোর্টস' : 'Reports', url: '/admin/reports', icon: BarChart3 as IconType, section: 'admin-reports' },
+  ];
+
+  const { isAdmin, isAdminMode, toggleAdminMode } = useAdmin();
 
   // Icon map for DB-driven items (map section -> icon component)
   const iconMap: Record<string, IconType> = {
@@ -322,10 +334,51 @@ export function AppSidebar({
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
+
+      {/* Admin Menu - Only visible in Admin Mode */}
+      {isAdmin && isAdminMode && (
+        <SidebarGroup className="px-0">
+          <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
+            <p className="text-base font-medium text-primary">
+              {language === 'bn' ? 'অ্যাডমিন' : 'Admin'}
+            </p>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {adminMenuItems.map(item => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const Icon = item.icon as any;
+                return (
+                  <SidebarMenuItem key={item.section}>
+                    <SidebarMenuButton onClick={() => onNavigate(item.section)} className={getMenuButtonClass(item.section)} size={collapsed ? "sm" : "default"}>
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span className="ml-2 truncate">{item.title}</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
     </SidebarContent>
 
     {/* Footer */}
     <SidebarFooter className="p-2 border-t border-border">
+      {/* Admin Mode Switcher */}
+      {isAdmin && !collapsed && (
+        <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+          <Label htmlFor="admin-mode" className="text-xs cursor-pointer">
+            {language === 'bn' ? 'অ্যাডমিন মোড' : 'Admin Mode'}
+          </Label>
+          <Switch 
+            id="admin-mode"
+            checked={isAdminMode}
+            onCheckedChange={toggleAdminMode}
+          />
+        </div>
+      )}
+
       {!collapsed ? <div className="space-y-2">
         {/* User Profile */}
         <div className="flex items-center gap-3 p-2 rounded-lg transition-colors">
