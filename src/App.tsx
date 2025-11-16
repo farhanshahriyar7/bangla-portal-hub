@@ -20,6 +20,9 @@ import Notifications from "./pages/Notifications";
 import ChildrenInformation from "./pages/ChildrenInformation";
 import UploadFiles from "./pages/UploadFiles";
 import MaritalStatus from "./pages/MaritalStatus";
+import UserManagement from "./pages/admin/UserManagement";
+import DatabaseManagement from "./pages/admin/DatabaseManagement";
+import Reports from "./pages/admin/Reports";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +51,10 @@ const App = () => {
               {/* <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /> */}
               <Route path="/settings" element={<ProtectedRoute><Settings language={language} /></ProtectedRoute>} />
               <Route path="/security" element={<ProtectedRoute><Security language={language} /></ProtectedRoute>} />
+              {/* Admin Routes */}
+              <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+              <Route path="/admin/database" element={<ProtectedRoute><DatabaseManagement /></ProtectedRoute>} />
+              <Route path="/admin/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
