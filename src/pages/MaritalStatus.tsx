@@ -609,8 +609,8 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                             <CardTitle>{t.title}</CardTitle>
                             <CardDescription className="text-red-700 font-extrabold text-base">
                                 {language === 'bn'
-                                    ? '*আপনার বৈবাহিক তথ্য এবং স্বামী/স্ত্রীর বিবরণ প্রদান করুন । সমস্ত প্রয়োজনীয় ক্ষেত্র পূরণ না করা পর্যন্ত আপনি ফর্মটি সংরক্ষণ করতে পারবেন না। সঠিক তথ্য প্রদান করুন। সর্বোচ্চ ৪টি স্বামী/স্ত্রীর তথ্য প্রদান করা যাবে।'
-                                    : '*Provide your marital information and spouse details. You cant save the form unless all required fields are filled. Please provide accurate information. A maximum of 4 spouse entries are allowed.'}
+                                    ? '*আপনার বৈবাহিক তথ্য এবং স্বামী/স্ত্রীর বিবরণ প্রদান করুন । সমস্ত প্রয়োজনীয় ক্ষেত্র পূরণ না করা পর্যন্ত আপনি ফর্মটি সংরক্ষণ করতে পারবেন না। সঠিক তথ্য প্রদান করুন। সর্বোচ্চ ৪জন  স্ত্রীর তথ্য প্রদান করা যাবে।'
+                                    : '*Provide your marital information and spouse details. You cant save the form unless all required fields are filled. Please provide accurate information. A maximum of 4 Wife entries are allowed.'}
                             </CardDescription>
                         </CardHeader>
                         <div className="max-w-7xl mx-auto">
@@ -627,7 +627,7 @@ const MaritalStatus = ({ language: initialLanguage }: { language: 'bn' | 'en' })
                                                         const el = document.querySelector(`[name="${firstErrorPath}"]`) as HTMLElement | null;
                                                         if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                                     } catch (e) {
-                                                        // ignore
+                                                        // ignoring
                                                     }
                                                 }
                                             })}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Home, User, FileText, Calendar, Upload, Download, Shield, Settings, Bell, LogOut, Building2, ChevronDown, Users } from "lucide-react";
+import { Home, User, FileText, Calendar, Upload, Download, Shield, Settings, Bell, LogOut, Building2, ChevronDown, Users, GraduationCap } from "lucide-react";
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
@@ -34,6 +34,7 @@ export function AppSidebar({
       title: language === 'bn' ? 'বৈবাহিক অবস্থা' : 'Marital Status', url: '/marital-status', icon: User as IconType, section: 'marital-status'
     },
     { title: language === 'bn' ? 'সন্তানদের তথ্যাবলি' : 'Children Information', url: '/children-information', icon: Users as IconType, section: 'children-information' },
+    { title: language === 'bn' ? 'শিক্ষাগত যোগ্যতা' : 'Educational Qualification', url: '/educational-qualification', icon: GraduationCap as IconType, section: 'educational-qualification' },
   ]);
 
   const [toolsMenuItems, setToolsMenuItems] = useState<Array<{ title: string; url: string; icon: IconType; section: string }>>([

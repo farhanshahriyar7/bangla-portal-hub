@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import GeneralInformation from "./pages/GeneralInformation";
 import Notifications from "./pages/Notifications";
 import ChildrenInformation from "./pages/ChildrenInformation";
+import EducationalQualification from "./pages/EducationalQualification";
 import UploadFiles from "./pages/UploadFiles";
 import MaritalStatus from "./pages/MaritalStatus";
 
@@ -41,6 +42,7 @@ const App = () => {
               <Route path="/general-information" element={<ProtectedRoute><GeneralInformation language={language} /></ProtectedRoute>} />
               <Route path="/marital-status" element={<ProtectedRoute><MaritalStatus language={language} /></ProtectedRoute>} />
               <Route path="/children-information" element={<ProtectedRoute><ChildrenInformation language={language} /></ProtectedRoute>} />
+              <Route path="/educational-qualification" element={<ProtectedRoute><EducationalQualification language={language} /></ProtectedRoute>} />
               <Route path="/upload-files" element={<ProtectedRoute><UploadFiles language={language} /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications language={language} /></ProtectedRoute>} />
               {/* <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /> */}
