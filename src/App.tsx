@@ -44,7 +44,7 @@ const App = () => {
               <Route path="/children-information" element={<ProtectedRoute><ChildrenInformation language={language} /></ProtectedRoute>} />
               <Route path="/educational-qualification" element={<ProtectedRoute><EducationalQualification language={language} /></ProtectedRoute>} />
               <Route path="/upload-files" element={<ProtectedRoute><UploadFiles language={language} /></ProtectedRoute>} />
-              <Route path="/notifications" element={<ProtectedRoute><Notifications language={language} /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               {/* <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /> */}
               <Route path="/settings" element={<ProtectedRoute><Settings language={language} /></ProtectedRoute>} />
               <Route path="/security" element={<ProtectedRoute><Security language={language} /></ProtectedRoute>} />
