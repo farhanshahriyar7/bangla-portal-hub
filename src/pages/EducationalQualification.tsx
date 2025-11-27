@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -46,6 +46,9 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
     const queryClient = useQueryClient();
     const { signOut, user } = useAuth();
     const navigate = useNavigate();
+
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [confirmIds, setConfirmIds] = useState<string[]>([]);
 
     const [formData, setFormData] = useState({
         degreeTitle: "",
@@ -287,6 +290,10 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
         }
     });
 
+    // Refs to keep track of pending scheduled deletes so we can undo before finalizing
+    const pendingDeletesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+    const pendingDeletedRecordsRef = useRef<Map<string, EducationalRecord>>(new Map());
+
     const handleSave = () => {
         const payload = {
             degree_title: formData.degreeTitle,
@@ -347,32 +354,57 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
         });
     };
 
-    const handleMassDelete = () => {
-        if (selectedRecords.length === 0) {
-            toast({ title: t.selectToDelete, duration: 3000 });
-            return;
-        }
-        const toDelete = [...selectedRecords];
-        deleteMutation.mutate(toDelete);
+    // Schedule deletion with undo window
+    const scheduleDelete = (ids: string[]) => {
+        if (!ids || ids.length === 0) return;
+        // store records snapshot so we can restore on undo
+        const recordsToDelete = (recordsData || []).filter(r => ids.includes(r.id));
+        recordsToDelete.forEach(r => pendingDeletedRecordsRef.current.set(r.id, r));
+
+        // optimistic UI: remove them from cache immediately
+        const queryKey = ['educational-qualifications', (user as unknown as { id?: string })?.id];
+        queryClient.setQueryData<EducationalRecord[] | undefined>(queryKey, (old) => (old || []).filter(r => !ids.includes(r.id)));
         setSelectedRecords([]);
 
-        const recordsToDelete = (recordsData || []).filter(r => toDelete.includes(r.id));
+        // create a single timeout and register it for each id so undo can cancel all
+        const timeout = setTimeout(() => {
+            // perform final DB delete
+            deleteMutation.mutate(ids);
+            // cleanup refs
+            ids.forEach(id => {
+                pendingDeletesRef.current.delete(id);
+                pendingDeletedRecordsRef.current.delete(id);
+            });
+        }, 15000);
+
+        ids.forEach(id => pendingDeletesRef.current.set(id, timeout));
+
+        // show undo toast
         const { dismiss } = toast({
             title: t.deleteSuccess,
             action: (
                 <Button variant="outline" size="sm" onClick={() => {
-                    // re-insert deleted records
-                    recordsToDelete.forEach(r => {
-                        addMutation.mutate({
-                            degree_title: r.degreeTitle,
-                            institution_name: r.institutionName,
-                            board_university: r.boardUniversity,
-                            subject: r.subject,
-                            passing_year: r.passingYear,
-                            result_division: r.resultDivision,
-                            user_id: (user as unknown as { id?: string })?.id,
-                        });
+                    // undo: cancel timeouts and restore records
+                    ids.forEach(id => {
+                        const to = pendingDeletesRef.current.get(id);
+                        if (to) {
+                            clearTimeout(to);
+                            pendingDeletesRef.current.delete(id);
+                        }
                     });
+
+                    // restore records into cache
+                    queryClient.setQueryData<EducationalRecord[] | undefined>(queryKey, (old) => {
+                        const restored = ids
+                            .map(id => pendingDeletedRecordsRef.current.get(id))
+                            .filter(Boolean) as EducationalRecord[];
+                        // prepend restored records to keep them visible
+                        const merged = [...restored, ...(old || [])];
+                        return merged;
+                    });
+
+                    // cleanup pendingDeletedRecords
+                    ids.forEach(id => pendingDeletedRecordsRef.current.delete(id));
                     if (typeof dismiss === 'function') dismiss();
                 }}>
                     {t.undo}
@@ -382,40 +414,23 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
         });
     };
 
+    const handleMassDelete = () => {
+        if (selectedRecords.length === 0) {
+            toast({ title: t.selectToDelete, duration: 3000 });
+            return;
+        }
+        const toDelete = [...selectedRecords];
+        setConfirmIds(toDelete);
+        setIsConfirmOpen(true);
+    };
+
     const handleDeleteSelected = () => {
         if (selectedIds.length === 0) {
             toast({ title: t.selectToDelete, duration: 3000 });
             return;
         }
-
-        const toDelete = [...selectedIds];
-        deleteMutation.mutate(toDelete);
-        setSelectedRecords([]);
-
-        const recordsToDelete = (recordsData || []).filter(r => toDelete.includes(r.id));
-        const { dismiss } = toast({
-            title: t.deleteSuccess,
-            action: (
-                <Button variant="outline" size="sm" onClick={() => {
-                    // re-insert deleted records
-                    recordsToDelete.forEach(r => {
-                        addMutation.mutate({
-                            degree_title: r.degreeTitle,
-                            institution_name: r.institutionName,
-                            board_university: r.boardUniversity,
-                            subject: r.subject,
-                            passing_year: r.passingYear,
-                            result_division: r.resultDivision,
-                            user_id: (user as unknown as { id?: string })?.id,
-                        });
-                    });
-                    if (typeof dismiss === 'function') dismiss();
-                }}>
-                    {t.undo}
-                </Button>
-            ),
-            duration: 15000,
-        });
+        setConfirmIds([...selectedIds]);
+        setIsConfirmOpen(true);
     };
 
     const handleDownload = async () => {
@@ -575,20 +590,21 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                         <div className="rounded-md border bg-card">
                             <Table>
                                 <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-12">
+                                    <TableRow className="bg-green-800 text-white hover:bg-green-800 border-b-[2px] border-green-900 dark:border-green-700 shadow-sm">
+                                        <TableHead className="w-12 font-semibold text-left text-white text-xs">
                                             <Checkbox
                                                 checked={selectedRecords.length === (recordsData || []).length && (recordsData || []).length > 0}
                                                 onCheckedChange={toggleSelectAll}
+                                                className='bg-white border-2 border-green-700 dark:border-green-600 hover:border-green-900 hover:dark:border-green-500'
                                             />
                                         </TableHead>
-                                        <TableHead>{t.degreeTitle}</TableHead>
-                                        <TableHead>{t.institution}</TableHead>
-                                        <TableHead>{t.boardUniversity}</TableHead>
-                                        <TableHead>{t.subject}</TableHead>
-                                        <TableHead>{t.passingYear}</TableHead>
-                                        <TableHead>{t.result}</TableHead>
-                                        <TableHead className="text-right">{t.actions}</TableHead>
+                                        <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.degreeTitle}</TableHead>
+                                        <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.institution}</TableHead>
+                                        <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.boardUniversity}</TableHead>
+                                        <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.subject}</TableHead>
+                                        <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.passingYear}</TableHead>
+                                        <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-center">{t.result}</TableHead>
+                                        <TableHead className="text-primary-foreground font-semibold text-xs border-r-[1.25px] border-green-700 dark:border-green-600 text-right">{t.actions}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -622,7 +638,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                                         >
                                                             <Edit className="h-4 w-4" />
                                                         </Button>
-                                                      
+
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -634,6 +650,28 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                     </main>
                 </SidebarInset>
             </div>
+
+            {/* Confirmation dialog for delete actions (Yes -> schedule undoable delete) */}
+            <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+                <DialogContent className="sm:max-w-[420px]">
+                    <DialogHeader>
+                        <DialogTitle>{language === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?'}</DialogTitle>
+                        <DialogDescription>
+                            {language === 'bn' ? 'নির্বাচিত রেকর্ডগুলো ১৫ সেকেন্ডের জন্য মুছে ফেলার জন্য শিডিউল করা হবে — পূর্বাবস্থা ফিরাতে Undo ব্যবহার করুন।' : 'Selected records will be scheduled for deletion with a 15s undo window.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-2">
+                        <p className="text-sm text-muted-foreground">{language === 'bn' ? `${confirmIds.length}টি রেকর্ড নির্বাচন করা হয়েছে` : `${confirmIds.length} records selected`}</p>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>{t.cancel}</Button>
+                        <Button variant="destructive" onClick={() => {
+                            scheduleDelete(confirmIds);
+                            setIsConfirmOpen(false);
+                        }}>{language === 'bn' ? 'হ্যাঁ' : 'Yes'}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="sm:max-w-[600px]">
