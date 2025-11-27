@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -37,7 +39,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<EducationalRecord | null>(null);
     const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
-    const [records, setRecords] = useState<EducationalRecord[]>([]);
+    const queryClient = useQueryClient();
     const { signOut, user } = useAuth();
     const navigate = useNavigate();
 
@@ -139,37 +141,136 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
         setIsModalOpen(true);
     };
 
-    const handleSave = () => {
-        if (editingRecord) {
-            setRecords(records.map(r => r.id === editingRecord.id ? { ...editingRecord, ...formData } : r));
-        } else {
-            const newRecord: EducationalRecord = {
-                id: Date.now().toString(),
-                ...formData,
-            };
-            setRecords([...records, newRecord]);
+    // React Query: fetch educational qualifications for current user
+    const { data: recordsData = [], isLoading } = useQuery({
+        queryKey: ['educational-qualifications', (user as unknown as { id?: string })?.id],
+        queryFn: async () => {
+            // If there's no logged-in user, return empty list.
+            if (!(user && (user as unknown as { id?: string }).id)) return [] as EducationalRecord[];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabase as any)
+                .from('educational_qualifications')
+                .select('*')
+                .eq('user_id', (user as unknown as { id?: string }).id)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            const rows = (data || []) as any[];
+            // Map DB snake_case -> UI camelCase model
+            return rows.map(r => ({
+                id: r.id,
+                degreeTitle: r.degree_title ?? r.degreeTitle ?? '',
+                institutionName: r.institution_name ?? r.institutionName ?? '',
+                boardUniversity: r.board_university ?? r.boardUniversity ?? '',
+                subject: r.subject ?? '',
+                passingYear: r.passing_year ?? r.passingYear ?? 0,
+                resultDivision: r.result_division ?? r.resultDivision ?? '',
+            })) as EducationalRecord[];
         }
+    });
 
-        toast({
-            title: t.saveSuccess,
-            duration: 3000,
-        });
+    const addMutation = useMutation({
+        mutationFn: async (payload: Record<string, unknown>) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabase as any)
+                .from('educational_qualifications')
+                .insert([payload])
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['educational-qualifications'] });
+            toast({ title: t.saveSuccess });
+        }
+    });
 
+    const updateMutation = useMutation({
+        mutationFn: async (payload: { id: string } & Record<string, unknown>) => {
+            const { id, ...rest } = payload as { id: string } & Record<string, unknown>;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabase as any)
+                .from('educational_qualifications')
+                .update(rest)
+                .eq('id', id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['educational-qualifications'] });
+            toast({ title: t.saveSuccess });
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: async (ids: string[]) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error } = await (supabase as any)
+                .from('educational_qualifications')
+                .delete()
+                .in('id', ids);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['educational-qualifications'] });
+            toast({ title: t.deleteSuccess });
+        }
+    });
+
+    const handleSave = () => {
+        const payload = {
+            degree_title: formData.degreeTitle,
+            institution_name: formData.institutionName,
+            board_university: formData.boardUniversity,
+            subject: formData.subject,
+            passing_year: formData.passingYear,
+            result_division: formData.resultDivision,
+            user_id: undefined as string | undefined,
+        };
+        if (editingRecord) {
+            // map to DB fields for update
+            updateMutation.mutate({
+                id: editingRecord.id,
+                degree_title: formData.degreeTitle,
+                institution_name: formData.institutionName,
+                board_university: formData.boardUniversity,
+                subject: formData.subject,
+                passing_year: formData.passingYear,
+                result_division: formData.resultDivision,
+                user_id: (user as unknown as { id?: string })?.id,
+            });
+        } else {
+            // include user id if available from auth
+            payload.user_id = (user && (user as unknown as { id?: string }).id) ? (user as unknown as { id?: string }).id : undefined;
+            addMutation.mutate(payload);
+        }
         setIsModalOpen(false);
     };
 
     const handleDelete = (id: string) => {
-        const recordToDelete = records.find(r => r.id === id);
-        setRecords(records.filter(r => r.id !== id));
+        const recordToDelete = (recordsData || []).find(r => r.id === id);
+        deleteMutation.mutate([id]);
 
+        // show undo option: re-insert the deleted record if user clicks undo
         const { dismiss } = toast({
             title: t.deleteSuccess,
             action: (
                 <Button variant="outline" size="sm" onClick={() => {
                     if (recordToDelete) {
-                        setRecords(prev => [...prev, recordToDelete]);
+                        // re-insert
+                        addMutation.mutate({
+                            degree_title: recordToDelete.degreeTitle,
+                            institution_name: recordToDelete.institutionName,
+                            board_university: recordToDelete.boardUniversity,
+                            subject: recordToDelete.subject,
+                            passing_year: recordToDelete.passingYear,
+                            result_division: recordToDelete.resultDivision,
+                            user_id: (user as unknown as { id?: string })?.id,
+                        });
                     }
-                    dismiss();
+                    if (typeof dismiss === 'function') dismiss();
                 }}>
                     {t.undo}
                 </Button>
@@ -180,23 +281,31 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
 
     const handleMassDelete = () => {
         if (selectedRecords.length === 0) {
-            toast({
-                title: t.selectToDelete,
-                duration: 3000,
-            });
+            toast({ title: t.selectToDelete, duration: 3000 });
             return;
         }
-
-        const recordsToDelete = records.filter(r => selectedRecords.includes(r.id));
-        setRecords(records.filter(r => !selectedRecords.includes(r.id)));
+        const toDelete = [...selectedRecords];
+        deleteMutation.mutate(toDelete);
         setSelectedRecords([]);
 
+        const recordsToDelete = (recordsData || []).filter(r => toDelete.includes(r.id));
         const { dismiss } = toast({
             title: t.deleteSuccess,
             action: (
                 <Button variant="outline" size="sm" onClick={() => {
-                    setRecords(prev => [...prev, ...recordsToDelete]);
-                    dismiss();
+                    // re-insert deleted records
+                    recordsToDelete.forEach(r => {
+                        addMutation.mutate({
+                            degree_title: r.degreeTitle,
+                            institution_name: r.institutionName,
+                            board_university: r.boardUniversity,
+                            subject: r.subject,
+                            passing_year: r.passingYear,
+                            result_division: r.resultDivision,
+                            user_id: (user as unknown as { id?: string })?.id,
+                        });
+                    });
+                    if (typeof dismiss === 'function') dismiss();
                 }}>
                     {t.undo}
                 </Button>
@@ -207,7 +316,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
 
     const handleDownload = () => {
         const worksheet = XLSX.utils.json_to_sheet(
-            records.map((record, index) => ({
+            (recordsData || []).map((record, index) => ({
                 [t.no]: index + 1,
                 [t.degreeTitle]: record.degreeTitle,
                 [t.institution]: record.institutionName,
@@ -230,10 +339,10 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
     };
 
     const toggleSelectAll = () => {
-        if (selectedRecords.length === records.length) {
+        if (selectedRecords.length === (recordsData || []).length) {
             setSelectedRecords([]);
         } else {
-            setSelectedRecords(records.map(r => r.id));
+            setSelectedRecords((recordsData || []).map(r => r.id));
         }
     };
 
@@ -289,11 +398,10 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                     <TableRow>
                                         <TableHead className="w-12">
                                             <Checkbox
-                                                checked={selectedRecords.length === records.length && records.length > 0}
+                                                checked={selectedRecords.length === (recordsData || []).length && (recordsData || []).length > 0}
                                                 onCheckedChange={toggleSelectAll}
                                             />
                                         </TableHead>
-                                        <TableHead>{t.no}</TableHead>
                                         <TableHead>{t.degreeTitle}</TableHead>
                                         <TableHead>{t.institution}</TableHead>
                                         <TableHead>{t.boardUniversity}</TableHead>
@@ -304,14 +412,14 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {records.length === 0 ? (
+                                    {(recordsData || []).length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                                 {t.noRecords}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        records.map((record, index) => (
+                                        (recordsData || []).map((record, index) => (
                                             <TableRow key={record.id}>
                                                 <TableCell>
                                                     <Checkbox
@@ -319,7 +427,6 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                                         onCheckedChange={() => toggleSelectRecord(record.id)}
                                                     />
                                                 </TableCell>
-                                                <TableCell>{index + 1}</TableCell>
                                                 <TableCell>{record.degreeTitle}</TableCell>
                                                 <TableCell>{record.institutionName}</TableCell>
                                                 <TableCell>{record.boardUniversity}</TableCell>
