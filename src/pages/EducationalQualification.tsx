@@ -227,7 +227,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
             if (error) throw error;
             const rows = (data || []) as any[];
             // Map DB snake_case -> UI camelCase model
-            return rows.map(r => ({
+            const mapped = rows.map(r => ({
                 id: r.id,
                 degreeTitle: r.degree_title ?? r.degreeTitle ?? '',
                 institutionName: r.institution_name ?? r.institutionName ?? '',
@@ -236,6 +236,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                 passingYear: r.passing_year ?? r.passingYear ?? 0,
                 resultDivision: r.result_division ?? r.resultDivision ?? '',
             })) as EducationalRecord[];
+            return mapped;
         }
     });
 
@@ -379,6 +380,8 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
 
         ids.forEach(id => pendingDeletesRef.current.set(id, timeout));
 
+        
+
         // show undo toast
         const { dismiss } = toast({
             title: t.deleteSuccess,
@@ -454,6 +457,8 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
             record.passingYear ?? '',
             record.resultDivision || '',
         ] as (string | number)[]));
+
+      
 
         const workbook = new ExcelJS.Workbook();
         workbook.creator = 'Bangla Portal';
