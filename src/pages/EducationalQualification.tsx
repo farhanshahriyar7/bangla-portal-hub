@@ -23,6 +23,7 @@ interface EducationalRecord {
     degreeTitle: string;
     institutionName: string;
     boardUniversity: string;
+    subject: string;
     passingYear: number;
     resultDivision: string;
 }
@@ -44,6 +45,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
         degreeTitle: "",
         institutionName: "",
         boardUniversity: "",
+        subject: "",
         passingYear: new Date().getFullYear(),
         resultDivision: "",
     });
@@ -57,11 +59,12 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
             massDelete: "সব মুছুন",
             download: "ডাউনলোড",
             no: "ক্রমিক",
-            degreeTitle: "ডিগ্রির নাম / বিষয়",
+            degreeTitle: "ডিগ্রির নাম",
             institution: "শিক্ষা প্রতিষ্ঠানের নাম",
             boardUniversity: "বোর্ড / বিশ্ববিদ্যালয়",
             passingYear: "পাসের সন",
             result: "ফলাফল / বিভাগ",
+            subject: "বিষয়",
             actions: "অ্যাকশন",
             modalTitle: "শিক্ষাগত যোগ্যতা যোগ করুন",
             modalEditTitle: "শিক্ষাগত যোগ্যতা সম্পাদনা করুন",
@@ -81,11 +84,12 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
             massDelete: "Mass Delete",
             download: "Download",
             no: "No",
-            degreeTitle: "Degree Title / Subject",
+            degreeTitle: "Degree Title",
             institution: "Institution Name",
             boardUniversity: "Board / University",
             passingYear: "Passing Year",
             result: "Result / Division",
+            subject: "Subject",
             actions: "Actions",
             modalTitle: "Add Educational Qualification",
             modalEditTitle: "Edit Educational Qualification",
@@ -117,6 +121,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                 degreeTitle: record.degreeTitle,
                 institutionName: record.institutionName,
                 boardUniversity: record.boardUniversity,
+                subject: record.subject || "",
                 passingYear: record.passingYear,
                 resultDivision: record.resultDivision,
             });
@@ -126,6 +131,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                 degreeTitle: "",
                 institutionName: "",
                 boardUniversity: "",
+                subject: "",
                 passingYear: new Date().getFullYear(),
                 resultDivision: "",
             });
@@ -206,6 +212,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                 [t.degreeTitle]: record.degreeTitle,
                 [t.institution]: record.institutionName,
                 [t.boardUniversity]: record.boardUniversity,
+                [t.subject]: record.subject,
                 [t.passingYear]: record.passingYear,
                 [t.result]: record.resultDivision,
             }))
@@ -290,6 +297,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                         <TableHead>{t.degreeTitle}</TableHead>
                                         <TableHead>{t.institution}</TableHead>
                                         <TableHead>{t.boardUniversity}</TableHead>
+                                        <TableHead>{t.subject}</TableHead>
                                         <TableHead>{t.passingYear}</TableHead>
                                         <TableHead>{t.result}</TableHead>
                                         <TableHead className="text-right">{t.actions}</TableHead>
@@ -315,6 +323,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                                 <TableCell>{record.degreeTitle}</TableCell>
                                                 <TableCell>{record.institutionName}</TableCell>
                                                 <TableCell>{record.boardUniversity}</TableCell>
+                                                <TableCell>{record.subject}</TableCell>
                                                 <TableCell>{record.passingYear}</TableCell>
                                                 <TableCell>{record.resultDivision}</TableCell>
                                                 <TableCell className="text-right">
@@ -360,6 +369,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                 placeholder={t.degreeTitle}
                             />
                         </div>
+
                         <div className="grid gap-2">
                             <Label htmlFor="institutionName">{t.institution}</Label>
                             <Input
@@ -376,6 +386,15 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                 value={formData.boardUniversity}
                                 onChange={(e) => setFormData({ ...formData, boardUniversity: e.target.value })}
                                 placeholder={t.boardUniversity}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="subject">{t.subject}</Label>
+                            <Input
+                                id="subject"
+                                value={formData.subject}
+                                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                placeholder={t.subject}
                             />
                         </div>
                         <div className="grid gap-2">
