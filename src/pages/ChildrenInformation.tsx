@@ -250,6 +250,7 @@ const ChildrenInformation = ({ language: initialLanguage }: ChildrenInformationP
         if (section === 'general-information') { navigate('/general-information'); return; }
         if (section === 'office-information') { navigate('/office-information'); return; }
         if (section === 'marital-status') { navigate('/marital-status'); return; }
+        if (section === 'educational-qualification') { navigate('/educational-qualification'); return; }
         if (section === 'upload-files') { navigate('/upload-files'); return; }
         if (section === 'notifications') { navigate('/notifications'); return; }
         if (section === 'security') { navigate('/security'); return; }

@@ -1,5 +1,5 @@
 -- Migration: create educational_qualifications table
--- Generated: 2025-11-27
+
 
 create table if not exists public.educational_qualifications (
   id uuid default gen_random_uuid() not null primary key,

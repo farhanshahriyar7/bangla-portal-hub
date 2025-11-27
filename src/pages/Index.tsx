@@ -86,6 +86,12 @@ const Index = () => {
       return;
     }
 
+    // Educational Qualification 
+    if (section === 'educational-qualification') {
+      navigate('/educational-qualification');
+      return;
+    }
+
     // Upload Files page
     if (section === 'upload-files') {
       navigate('/upload-files');

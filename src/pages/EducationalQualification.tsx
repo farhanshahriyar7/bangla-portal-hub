@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Download, Trash2, Edit, Eye, GraduationCap } from "lucide-react";
+import { Plus, Download, Trash2, Edit, Eye, GraduationCap, Menu } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -18,7 +18,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+import Breadcrumbs from "@/components/ui/breadcrumb";
 
 interface EducationalRecord {
     id: string;
@@ -107,8 +109,67 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
 
     const t = translations[language];
 
-    const handleNavigate = (section: string) => {
-        navigate(section);
+    const handleNavigate = async (section: string) => {
+        if (section === 'dashboard') {
+            navigate('/');
+            return;
+        }
+
+        if (section === 'office-information') {
+            navigate('/office-information');
+            return;
+        }
+
+        if (section === 'children-information') {
+            navigate('/children-information');
+            return;
+        }
+
+        if (section === 'educational-qualification') { 
+            navigate('/educational-qualification'); 
+            return; 
+        }
+
+        if (section === 'marital-status') {
+            navigate('/marital-status');
+            return;
+        }
+
+        if (section === 'upload-files') {
+            navigate('/upload-files');
+            return;
+        }
+
+        if (section === 'notifications') {
+            navigate('/notifications');
+            return;
+        }
+
+        if (section === 'security') {
+            navigate('/security');
+            return;
+        }
+
+        if (section === 'settings') {
+            navigate('/settings');
+            return;
+        }
+
+        if (section === 'logout') {
+            try {
+                await signOut();
+                toast({
+                    title: language === 'bn' ? 'লগ আউট' : 'Logout',
+                    description: language === 'bn' ? 'আপনি সফলভাবে লগআউট হয়েছেন' : 'You have been successfully logged out.',
+                });
+                navigate('/login');
+            } catch (err) {
+                toast({ title: language === 'bn' ? 'ত্রুটি' : 'Error', description: language === 'bn' ? 'লগআউট বিফল' : 'Failed to logout', variant: 'destructive' });
+            }
+            return;
+        }
+
+        toast({ title: language === 'bn' ? 'শীঘ্রই আসছে' : 'Coming Soon', description: language === 'bn' ? 'এই পেজটি শীঘ্রই উপলব্ধ হবে।' : 'This page will be available soon.' });
     };
 
     const handleLogout = async () => {
@@ -314,22 +375,85 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
         });
     };
 
-    const handleDownload = () => {
-        const worksheet = XLSX.utils.json_to_sheet(
-            (recordsData || []).map((record, index) => ({
-                [t.no]: index + 1,
-                [t.degreeTitle]: record.degreeTitle,
-                [t.institution]: record.institutionName,
-                [t.boardUniversity]: record.boardUniversity,
-                [t.subject]: record.subject,
-                [t.passingYear]: record.passingYear,
-                [t.result]: record.resultDivision,
-            }))
-        );
+    const handleDownload = async () => {
+        // Use ExcelJS to reliably apply fonts and bold headers in the generated XLSX.
+        const headers = [
+            String(t.no),
+            String(t.degreeTitle),
+            String(t.institution),
+            String(t.boardUniversity),
+            String(t.subject),
+            String(t.passingYear),
+            String(t.result),
+        ];
 
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Educational Records");
-        XLSX.writeFile(workbook, "educational_qualifications.xlsx");
+        const rows = (recordsData || []).map((record, index) => ([
+            index + 1,
+            record.degreeTitle || '',
+            record.institutionName || '',
+            record.boardUniversity || '',
+            record.subject || '',
+            record.passingYear ?? '',
+            record.resultDivision || '',
+        ] as (string | number)[]));
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'Bangla Portal';
+        workbook.created = new Date();
+
+        const sheetName = language === 'bn' ? 'শিক্ষাগত যোগ্যতা' : 'Educational Records';
+        const worksheet = workbook.addWorksheet(sheetName);
+
+        // Column definitions with widths
+        worksheet.columns = [
+            { header: headers[0], key: 'no', width: 6 },
+            { header: headers[1], key: 'degree', width: 30 },
+            { header: headers[2], key: 'institution', width: 30 },
+            { header: headers[3], key: 'board', width: 25 },
+            { header: headers[4], key: 'subject', width: 40 },
+            { header: headers[5], key: 'year', width: 12 },
+            { header: headers[6], key: 'result', width: 18 },
+        ];
+
+        // Add header row (ExcelJS uses the column headers when adding rows if keys used,
+        // but we want explicit control to style headers)
+        const headerRow = worksheet.getRow(1);
+        headers.forEach((h, idx) => {
+            const cell = headerRow.getCell(idx + 1);
+            cell.value = h;
+            cell.font = { name: 'SutonnyOMJ', size: 12, bold: true };
+        });
+        headerRow.commit();
+
+        // Bangla detection helper
+        const isBangla = (text: string) => /[\u0980-\u09FF]/.test(text);
+
+        // Add data rows
+        rows.forEach((r) => {
+            const newRow = worksheet.addRow(r);
+            newRow.eachCell((cell) => {
+                const cellValue = String(cell.value ?? '');
+                const fontName = isBangla(cellValue) ? 'SutonnyOMJ' : 'Times New Roman';
+                cell.font = { name: fontName, size: 12 };
+            });
+            newRow.commit();
+        });
+
+        // Generate file buffer and trigger download
+        try {
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const fileName = `educational_qualifications_${new Date().toISOString().split('T')[0]}.xlsx`;
+            saveAs(blob, fileName);
+
+            toast({
+                title: language === 'bn' ? 'ডাউনলোড সফল' : 'Download Successful',
+                description: language === 'bn' ? `ফাইলটি ডাউনলোড হয়েছে — ${rows.length} রেকর্ড` : `File downloaded — ${rows.length} records`,
+            });
+        } catch (err) {
+            console.error('ExcelJS write error', err);
+            toast({ title: language === 'bn' ? 'ডাউনলোড ব্যর্থ' : 'Download Failed', description: (err as Error)?.message || String(err), variant: 'destructive' });
+        }
     };
 
     const toggleSelectRecord = (id: string) => {
@@ -350,9 +474,16 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
         <SidebarProvider>
             <div className="flex min-h-screen w-full bg-background">
                 <AppSidebar language={language} onNavigate={handleNavigate} />
+
                 <SidebarInset className="flex-1">
                     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
-                        <SidebarTrigger />
+                        <SidebarTrigger className="p-2 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors">
+                            <Menu className="h-4 w-4" />
+                        </SidebarTrigger>
+                        <div className='flex items-center gap-1.5'>
+                            <Breadcrumbs items={[{ label: language === 'bn' ? 'শিক্ষাগত যোগ্যতা' : 'Education Qualification' }]} />
+                        </div>
+
                         <div className="flex-1" />
                         <Button
                             variant="outline"

@@ -270,7 +270,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       return;
     }
 
-      if (section === 'marital-status') {
+    if (section === 'marital-status') {
       navigate('/marital-status');
       return;
     }
@@ -282,6 +282,11 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
 
     if (section === 'children-information') {
       navigate('/children-information');
+      return;
+    }
+
+    if (section === 'educational-qualification') {
+      navigate('/educational-qualification');
       return;
     }
 
@@ -403,7 +408,7 @@ export default function OfficeInformation({ language: initialLanguage }: OfficeI
       console.error('Error deleting office information:', error);
       toast({
         title: language === 'bn' ? 'ত্রুটি' : 'Error',
-        
+
         description: language === 'bn' ? 'মুছতে ব্যর্থ হয়েছে' : 'Failed to delete items',
         variant: 'destructive',
       });

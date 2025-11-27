@@ -79,6 +79,11 @@ export default function Settings({ language: initialLanguage }: SettingsProps) {
       return;
     }
 
+    if (section === 'educational-qualification') {
+      navigate('/educational-qualification');
+      return;
+    }
+
     if (section === 'upload-files') {
       navigate('/upload-files');
       return;
