@@ -591,6 +591,11 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
       return;
     }
 
+    if (section === 'educational-qualification') { 
+      navigate('/educational-qualification'); 
+      return; 
+    }
+
     if (section === 'upload-files') {
       navigate('/upload-files');
       return;
@@ -1064,7 +1069,7 @@ export default function GeneralInformation({ language: initialLanguage = 'bn' }:
             }
           }} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {missingGeneralFields.map((f) => {
+              {missingGeneralFields.map((f) => {
                 const editVal = (formData as Partial<GeneralInfoRow>)[f.key];
                 return (
                   <div className="space-y-2" key={String(f.key)}>

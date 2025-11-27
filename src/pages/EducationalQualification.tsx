@@ -41,6 +41,8 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<EducationalRecord | null>(null);
     const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
+    // alias for consistency with other pages/components
+    const selectedIds = selectedRecords;
     const queryClient = useQueryClient();
     const { signOut, user } = useAuth();
     const navigate = useNavigate();
@@ -120,14 +122,19 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
             return;
         }
 
+        if (section === 'general-information') {
+            navigate('/general-information');
+            return;
+        }
+
         if (section === 'children-information') {
             navigate('/children-information');
             return;
         }
 
-        if (section === 'educational-qualification') { 
-            navigate('/educational-qualification'); 
-            return; 
+        if (section === 'educational-qualification') {
+            navigate('/educational-qualification');
+            return;
         }
 
         if (section === 'marital-status') {
@@ -375,6 +382,42 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
         });
     };
 
+    const handleDeleteSelected = () => {
+        if (selectedIds.length === 0) {
+            toast({ title: t.selectToDelete, duration: 3000 });
+            return;
+        }
+
+        const toDelete = [...selectedIds];
+        deleteMutation.mutate(toDelete);
+        setSelectedRecords([]);
+
+        const recordsToDelete = (recordsData || []).filter(r => toDelete.includes(r.id));
+        const { dismiss } = toast({
+            title: t.deleteSuccess,
+            action: (
+                <Button variant="outline" size="sm" onClick={() => {
+                    // re-insert deleted records
+                    recordsToDelete.forEach(r => {
+                        addMutation.mutate({
+                            degree_title: r.degreeTitle,
+                            institution_name: r.institutionName,
+                            board_university: r.boardUniversity,
+                            subject: r.subject,
+                            passing_year: r.passingYear,
+                            result_division: r.resultDivision,
+                            user_id: (user as unknown as { id?: string })?.id,
+                        });
+                    });
+                    if (typeof dismiss === 'function') dismiss();
+                }}>
+                    {t.undo}
+                </Button>
+            ),
+            duration: 15000,
+        });
+    };
+
     const handleDownload = async () => {
         // Use ExcelJS to reliably apply fonts and bold headers in the generated XLSX.
         const headers = [
@@ -512,11 +555,17 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                     <Plus className="h-4 w-4 mr-2" />
                                     {t.addNew}
                                 </Button>
-                                <Button variant="destructive" onClick={handleMassDelete}>
+
+                                {/* Delete selected */}
+                                <Button onClick={handleDeleteSelected} variant="destructive" className="hidden sm:inline-flex" disabled={selectedIds.length === 0}>
+                                    {language === 'bn' ? 'মুছুন' : 'Delete'}
+                                </Button>
+
+                                <Button variant="destructive" className="hidden sm:inline-flex bg-red-950 hover:bg-red-900 text-white" onClick={handleMassDelete}>
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     {t.massDelete}
                                 </Button>
-                                <Button variant="secondary" onClick={handleDownload}>
+                                <Button variant="outline" className="bg-white hover:bg-black underline text-black hover:text-white" onClick={handleDownload}>
                                     <Download className="h-4 w-4 mr-2" />
                                     {t.download}
                                 </Button>
@@ -573,13 +622,7 @@ const EducationalQualification = ({ language: initialLanguage }: EducationalQual
                                                         >
                                                             <Edit className="h-4 w-4" />
                                                         </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleDelete(record.id)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                                      
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
